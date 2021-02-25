@@ -24,7 +24,6 @@ void compute_particle_dipole_quincke(double *mu_space, const double *mu_body, qu
     mu_space[1] *= magnitude;
     mu_space[2] *= magnitude;
     mu_space[2] -= magnitude * ewald_param.Pz_factor;
-    // fprintf(stderr, "mu %e %e %e\n", mu_space[0], mu_space[1], mu_space[2]);
 }
 void compute_particle_dipole_quincke_image(double *mu_space, const double *mu_body, quaternion &q) {
     double e_omega_space[DIM] = {0.0, 0.0, 0.0};
@@ -37,7 +36,6 @@ void compute_particle_dipole_quincke_image(double *mu_space, const double *mu_bo
     mu_space[1] *= -magnitude;
     mu_space[2] *= magnitude;
     mu_space[2] -= magnitude * ewald_param.Pz_factor;
-    // fprintf(stderr, "mu %e %e %e\n", mu_space[0], mu_space[1], mu_space[2])
 }
 void compute_particle_dipole_standard(double *mu_space, const double *mu_body, quaternion &q) {
     rigid_body_rotation(mu_space, mu_body, q, BODY2SPACE);
@@ -882,11 +880,7 @@ void Calc_multipole_interaction_force_torque_with_image(Particle *p) {
             for (int d = 0; d < DIM; d++) {
                 pi.fr[d] += ewald_mem.force[i][d];
                 pi.torque_r[d] += ewald_mem.torque[i][d];
-                // fprintf(stderr, "%e %e\n", pi.fr[d], pi.torque_r[d]);
             }
-            // fprintf(stderr, "i = %d\n", i);
-            // fprintf(stderr, "frc %e %e %e\n", ewald_mem.force[i][0], ewald_mem.force[i][1], ewald_mem.force[i][2]);
-            // fprintf(stderr, "tau %e %e %e\n", ewald_mem.torque[i][0], ewald_mem.torque[i][1], ewald_mem.torque[i][2]);
         }
     }
 
@@ -896,7 +890,6 @@ void Calc_multipole_interaction_force_torque_with_image(Particle *p) {
             for (int n = Rigid_Particle_Cumul[rigidID]; n < Rigid_Particle_Cumul[rigidID + 1]; n++) {
                 const double *frc = ewald_mem.force[n];
                 const double *tau = ewald_mem.torque[n];
-                // fprintf(stderr, "rigidID %d\n", rigidID);
                 for (int d = 0; d < DIM; d++) {
                     forceGrs[rigidID][d] += frc[d];
                     torqueGrs[rigidID][d] += tau[d];
@@ -905,9 +898,7 @@ void Calc_multipole_interaction_force_torque_with_image(Particle *p) {
                     torqueGrs[rigidID][0] += (GRvecs[n][1] * frc[2] - GRvecs[n][2] * frc[1]);
                     torqueGrs[rigidID][1] += (GRvecs[n][2] * frc[0] - GRvecs[n][0] * frc[2]);
                     torqueGrs[rigidID][2] += (GRvecs[n][0] * frc[1] - GRvecs[n][1] * frc[0]);
-                }
-                // fprintf(stderr, "frc %e %e %e\n", frc[0], frc[1], frc[2]);
-                // fprintf(stderr, "tau %e %e %e\n", tau[0], tau[1], tau[2]);
+                } 
             }
         }
     }

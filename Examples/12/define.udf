@@ -6,73 +6,74 @@
   \end{def}
   \begin{data}
     EngineType:"Kapsel"
-    EngineVersion:"v3.3"
-    Comment:"2018/02/13"
+    EngineVersion:"v4.1"
+    Comment:"2020/09/28"
   \end{data}
 \end{header}
 
+\include{"kapsel_unit.udf"}
 \begin{global_def}
 
-class Vector3d:{x: float, y: float, z: float}
+class Vector3d:{x: float[unit], y: float[unit], z: float[unit]}[unit]
 class Quaternion:{q0: float, q1: float, q2: float, q3: float}
-class Particle:{R:Vector3d,  v:Vector3d, q:Quaternion, omega:Vector3d}
+class Particle:{R:Vector3d [L],  v:Vector3d [L/tau], q:Quaternion, omega:Vector3d}
 class SlabSelection:{start: int, count: int, stride: int}
 
 constitutive_eq: {
-   type: select {'Navier_Stokes','Shear_Navier_Stokes','Shear_Navier_Stokes_Lees_Edwards', 'Electrolyte'}
+   type: select {'Navier_Stokes','Shear_Navier_Stokes','Shear_Navier_Stokes_Lees_Edwards','Electrolyte','Navier_Stokes_FDM','Navier_Stokes_Cahn_Hilliard_FDM','Shear_Navier_Stokes_Lees_Edwards_FDM','Shear_NS_LE_CH_FDM'}
  
    Navier_Stokes: { 
-      DX: 	double "lattice spacing (=1), fixed for all directions"
-      RHO:	double "mass density of solvent" 
-      ETA:	double "shear viscosity of solvent"
-      kBT:	double "temperature"
+      DX: 	double [L] "lattice spacing (=1), fixed for all directions"
+      RHO:	double [rho] "mass density of solvent" 
+      ETA:	double [eta] "shear viscosity of solvent"
+      kBT:	double [epsilon] "temperature"
       alpha_v: 	double "correction coefficient of V"
       alpha_o: 	double "correction coefficient of Omega"
    }//End Navier_Stokes
 
    Shear_Navier_Stokes: { 
-      DX: 	double "lattice spacing (=1), fixed for all directions"
-      RHO:	double "mass density of solvent" 
-      ETA:	double "shear viscosity of solvent"
-      kBT:	double "temperature"
+      DX: 	double [L] "lattice spacing (=1), fixed for all directions"
+      RHO:	double [rho] "mass density of solvent" 
+      ETA:	double [eta] "shear viscosity of solvent"
+      kBT:	double [epsilon] "temperature"
       alpha_v: 	double "correction coefficient of V"
       alpha_o: 	double "correction coefficient of Omega"
       External_field: {
 	 type: select {"DC","AC"}
 	 DC: {
-	    Shear_rate:double "shear rate"
+	    Shear_rate:double [1/tau] "shear rate"
 	 }
 	 AC: {
-	    Shear_rate:double "shear rate"
-	    Frequency: double "alternating frequenct"
+	    Shear_rate:double [1/tau] "shear rate"
+	    Frequency: double [1/tau] "alternating frequenct"
 	}
       }
    }//end Shear_Navier_Stokes
 
    Shear_Navier_Stokes_Lees_Edwards: { 
-      DX: 	double "lattice spacing (=1), fixed for all directions"
-      RHO:	double "mass density of solvent" 
-      ETA:	double "shear viscosity of solvent"
-      kBT:	double "temperature"
+      DX: 	double [L] "lattice spacing (=1), fixed for all directions"
+      RHO:	double [rho] "mass density of solvent" 
+      ETA:	double [eta] "shear viscosity of solvent"
+      kBT:	double [epsilon] "temperature"
       alpha_v: 	double "correction coefficient of V"
       alpha_o: 	double "correction coefficient of Omega"
       External_field: {
 	 type: select {"DC","AC"}
 	 DC: {
-	    Shear_rate:double "shear rate"
+	    Shear_rate:double [1/tau] "shear rate"
 	 }
 	 AC: {
-	    Shear_rate:double "shear rate"
-	    Frequency: double "alternating frequenct"
+	    Shear_rate:double [1/tau] "shear rate"
+	    Frequency: double [1/tau] "alternating frequenct"
 	}
       }
    }
 
    Electrolyte: { 
-      DX: 	double "lattice spacing (=1), fixed for all directions"
-      RHO:	double "mass density of solvent" 
-      ETA:	double "shear viscosity of solvent"
-      kBT:	double "temperature"
+      DX: 	double [L] "lattice spacing (=1), fixed for all directions"
+      RHO:	double [rho] "mass density of solvent" 
+      ETA:	double [eta] "shear viscosity of solvent"
+      kBT:	double [epsilon] "temperature"
       alpha_v: 	double "correction coefficient of V"
       alpha_o: 	double "correction coefficient of Omega"
       Dielectric_cst: double "dielectric constant"
@@ -109,6 +110,163 @@ constitutive_eq: {
 	 }
       } //End Electric Field
    } // End Electrolyte
+   
+   Navier_Stokes_FDM: {
+	  NS_solver: {
+	  type: select {'explicit_scheme','implicit_scheme'} "explicit_scheme: explicit MAC scheme, ON: implicit MAC scheme"
+	  	implicit_scheme: {
+	      tolerance: double "stopping criteria"
+          maximum_iteration: int "number of maximum iteration"
+	  	}
+	  }
+      DX: 	double [L] "lattice spacing (=1), fixed for all directions"
+      RHO:	double [rho] "mass density of solvent" 
+      ETA:	double [eta] "shear viscosity of solvent"
+      kBT:	double [epsilon] "temperature"
+      alpha_v: 	double "correction coefficient of V"
+      alpha_o: 	double "correction coefficient of Omega"
+   }//End Navier_Stokes_FDM
+   
+   Navier_Stokes_Cahn_Hilliard_FDM: {
+	  NS_solver: {
+	  type: select {'explicit_scheme','implicit_scheme'} "explicit_scheme: explicit MAC scheme, ON: implicit MAC scheme"
+	  	implicit_scheme: {
+	      tolerance: double "stopping criteria"
+          maximum_iteration: int "number of maximum iteration"
+          viscosity_change: select {'ON','OFF'}
+          	 ON: {
+          	 ETA_A:	double [eta] "shear viscosity of solvent A"
+          	 ETA_B:	double [eta] "shear viscosity of solvent B"
+	 		}
+	  	}
+	  }
+	  CH_solver: {
+	  type: select {'explicit_scheme','implicit_scheme'} "explicit_scheme: explicit Euler scheme, ON: implicit BDFAB scheme"
+	  	implicit_scheme: {
+	      tolerance: double "stopping criteria"
+          maximum_iteration: int "number of maximum iteration"
+	  	}
+	  }
+      DX: 	double [L] "lattice spacing (=1), fixed for all directions"
+      RHO:	double [rho] "mass density of solvent" 
+      ETA:	double [eta] "shear viscosity of solvent"
+      kBT:	double [epsilon] "temperature"
+      alpha_v: 	double "correction coefficient of V"
+      alpha_o: 	double "correction coefficient of Omega"
+      Potential: {
+        type: select {'Landau','Flory_Huggins'}
+   	    Landau: {
+          composition_ratio: double "composition ratio of A and B fluids"
+          initial_fluctuation: double "initial fluctuation of concentration"
+          a: double "GL parameter (third order term)"
+          b: double "GL parameter (first order term)"
+          d: double "penalty factor in fictitious particle domain"
+          w: double "penalty factor on particle surface domain"
+          alpha: double "surface parameter on fluid-fluid surface"
+          kappa: double "mobility parameter"
+       }
+       Flory_Huggins: {
+         composition_ratio: double "composition ratio of A and B fluids"
+         initial_fluctuation: double "initial fluctuation of concentration"
+         na: double "(reduced) number of porimerization of A component"
+         nb: double "(reduced) number of porimerization of B component"
+         chi: double "Flory's interaction parameter (chi parameter)"
+         d: double "penalty factor in fictitious particle domain"
+         w: double "penalty factor on particle surface domain"
+         alpha: double "surface parameter on fluid-fluid surface"
+         kappa: double "mobility parameter"
+       }
+     }
+   }//End Navier_Stokes_Cahn_Hilliard_FDM
+   
+   Shear_Navier_Stokes_Lees_Edwards_FDM: {
+   	  NS_solver: {
+	  type: select {'explicit_scheme','implicit_scheme'} "explicit_scheme: explicit MAC scheme, ON: implicit MAC scheme"
+	  	implicit_scheme: {
+	      tolerance: double "stopping criteria"
+          maximum_iteration: int "number of maximum iteration"
+	  	}
+	  }
+      DX: 	double [L] "lattice spacing (=1), fixed for all directions"
+      RHO:	double [rho] "mass density of solvent" 
+      ETA:	double [eta] "shear viscosity of solvent"
+      kBT:	double [epsilon] "temperature"
+      alpha_v: 	double "correction coefficient of V"
+      alpha_o: 	double "correction coefficient of Omega"
+      External_field: {
+	 type: select {"DC","AC"}
+	 DC: {
+	    Shear_rate:double [1/tau] "shear rate"
+	 }
+	 AC: {
+	    Shear_rate:double [1/tau] "shear rate"
+	    Frequency: double [1/tau] "alternating frequenct"
+	}
+      }
+   }//End Shear_Navier_Stokes_Lees_Edwards_FDM
+   
+   Shear_NS_LE_CH_FDM: {
+   	  NS_solver: {
+	  type: select {'explicit_scheme','implicit_scheme'} "explicit_scheme: explicit MAC scheme, ON: implicit MAC scheme"
+	  	implicit_scheme: {
+	      tolerance: double "stopping criteria"
+          maximum_iteration: int "number of maximum iteration"
+          viscosity_change: select {'ON','OFF'}
+          	 ON: {
+          	 ETA_A:	double [eta] "shear viscosity of solvent A"
+          	 ETA_B:	double [eta] "shear viscosity of solvent B"
+	 		}
+	  	}
+	  }
+	  CH_solver: {
+	  type: select {'explicit_scheme','implicit_scheme'} "explicit_scheme: explicit Euler scheme, ON: implicit BDFAB scheme"
+	  	implicit_scheme: {
+	      tolerance: double "stopping criteria"
+          maximum_iteration: int "number of maximum iteration"
+	  	}
+	  }
+      DX: 	double [L] "lattice spacing (=1), fixed for all directions"
+      RHO:	double [rho] "mass density of solvent" 
+      ETA:	double [eta] "shear viscosity of solvent"
+      kBT:	double [epsilon] "temperature"
+      alpha_v: 	double "correction coefficient of V"
+      alpha_o: 	double "correction coefficient of Omega"
+      Potential: {
+        type: select {'Landau','Flory_Huggins'}
+   	    Landau: {
+          composition_ratio: double "composition ratio of A and B fluids"
+          initial_fluctuation: double "initial fluctuation of concentration"
+          a: double "GL parameter (third order term)"
+          b: double "GL parameter (first order term)"
+          d: double "penalty factor in fictitious particle domain"
+          w: double "penalty factor on particle surface domain"
+          alpha: double "surface parameter on fluid-fluid surface"
+          kappa: double "mobility parameter"
+       }
+       Flory_Huggins: {
+         composition_ratio: double "composition ratio of A and B fluids"
+         initial_fluctuation: double "initial fluctuation of concentration"
+         na: double "(reduced) number of porimerization of A component"
+         nb: double "(reduced) number of porimerization of B component"
+         chi: double "Flory's interaction parameter (chi parameter)"
+         d: double "penalty factor in fictitious particle domain"
+         w: double "penalty factor on particle surface domain"
+         alpha: double "surface parameter on fluid-fluid surface"
+         kappa: double "mobility parameter"
+       }
+     }
+      External_field: {
+	 type: select {"DC","AC"}
+	 DC: {
+	    Shear_rate:double [1/tau] "shear rate"
+	 }
+	 AC: {
+	    Shear_rate:double [1/tau] "shear rate"
+	    Frequency: double [1/tau] "alternating frequenct"
+	}
+      }
+   }//End Shear_Navier_Stokes_Lees_Edwards_Cahn_Hilliard_FDM
+   
 } // End constitutive_eq
 
 object_type: {
@@ -125,6 +283,8 @@ object_type: {
 	 janus_torque: Vector3d "self-propulsion torque"
 	 janus_slip_vel: float "Slip velocity coeff B1"
 	 janus_slip_mode: float "Blake squirmer mode B2/B1"
+	 janus_rotlet_C1: float "rotlet coefficient C1"
+	 janus_rotlet_dipole_C2: float  "rotlet dipole C2"
       }
    }//end spherical_particle
 
@@ -155,14 +315,14 @@ A_XI: double "interface thickness in the unit of DX"
 A: double "colloid radius in the unit of DX"
 
 gravity: {
-   G: double "gravitaional acceleration constant"
+   G: double [L*tau^-2] "gravitaional acceleration constant"
    G_direction: select {'-X','-Y','-Z'} "direction of gravitaional acceleration" 
 }
 
 
-EPSILON: double "Lennard-Jones depth"
+EPSILON: double [epsilon] "Lennard-Jones depth"
 
-LJ_powers: select {'12:6','24:12','36:18'} "set of power exponents of LJ potential" 
+LJ_powers: select {'12:6','24:12','36:18','macro_vdw','electro_osmotic_flow'} "set of power exponents of LJ potential" 
 
 mesh: {
    NPX: int "number of mesh in x-direction = 2^NPX"
@@ -176,7 +336,7 @@ time_increment: {
       factor: double "delta_t = factor * h(determined by system paramters)"
    }
    manual: {
-      delta_t: double
+      delta_t: double [tau]
    }
 }
 
@@ -223,7 +383,15 @@ switch: {
    wall:{
       type: select{'NONE', 'FLAT'}
       FLAT: {axis: select{'X', 'Y', 'Z'}"perpendicular axis to flat parallel walls"
-      DH: int "wall thickness in number of grid points"}
+      DH: int "wall thickness in number of grid points"
+      LJ_Params: select{"AUTO", "MANUAL"}
+      MANUAL:{
+      truncate: select{'ON', 'OFF', 'NONE'} "Truncate OFF: attractive force, ON: no attractive force"
+      powers: select{'12:6','24:12','36:18'} "type of LJ potential"
+      EPSILON: double "LJ parameter, default（Basically, a large value.）"
+      }
+      }
+
    }
    quincke:{
       type: select{'ON','OFF'}
@@ -243,6 +411,10 @@ switch: {
                FIXED:{
                   dir   : select{'X', 'Y', 'Z'} "direction of dipolar axis"
                }
+               QUINCKE:{
+                  type : select{'with_mirror_image','no_mirror_image'} "Mirror image component of electrode surface"
+                  Pz_factor : double "Pz strength += Pz_factor*magnitude"
+               }
             }
          }
          EwaldParams:{
@@ -252,7 +424,7 @@ switch: {
             epsilon : double "Permittivity at boundary ( if  negative, set to tinfoil)"
          }
       }
-    }
+   } 
 }
 
 output: {
@@ -290,31 +462,34 @@ output: {
 \end{global_def}
 
 \begin{def}
-class outParticle:{R:Vector3d,  R_raw:Vector3d, v:Vector3d, 
+class outParticle:{R:Vector3d [L],  R_raw:Vector3d [L], v:Vector3d [L/tau], 
                    q:Quaternion, omega:Vector3d, 
-      		   f_hydro:Vector3d, torque_hydro:Vector3d, 
-                   f_r:Vector3d, torque_r:Vector3d,
-                   f_slip:Vector3d, torque_slip:Vector3d}
-E: float "total kinetic energy of the system"
+      		   f_hydro:Vector3d [mass*L*tau^-2], torque_hydro:Vector3d, 
+                   f_r:Vector3d [mass*L*tau^-2], torque_r:Vector3d,
+                   f_slip:Vector3d [mass*L*tau^-2], torque_slip:Vector3d}
+E: float [epsilon] "total kinetic energy of the system"
 t: float "total time"
 Particles[]: outParticle
 RigidParticles[]: outParticle
+PSI[][][]: {
+        psi: float
+}
 \end{def}
 
 
 \begin{def}
 class sParticle:{ 
-      R:Vector3d ,
-      R_raw:Vector3d ,
-      v:Vector3d ,
-      v_old:Vector3d ,
-      f_hydro:Vector3d ,
-      f_hydro_previous:Vector3d ,
-      f_hydro1:Vector3d ,
-      f_slip:Vector3d ,
-      f_slip_previous:Vector3d,
-      fr:Vector3d ,
-      fr_previous:Vector3d ,
+      R:Vector3d [L],
+      R_raw:Vector3d [L],
+      v:Vector3d [L/tau],
+      v_old:Vector3d [L/tau],
+      f_hydro:Vector3d [mass*L*tau^-2],
+      f_hydro_previous:Vector3d  [mass*L*tau^-2],
+      f_hydro1:Vector3d  [mass*L*tau^-2],
+      f_slip:Vector3d  [mass*L*tau^-2],
+      f_slip_previous:Vector3d  [mass*L*tau^-2],
+      fr:Vector3d  [mass*L*tau^-2],
+      fr_previous:Vector3d  [mass*L*tau^-2],
       omega:Vector3d ,
       omega_old:Vector3d ,
       torque_hydro:Vector3d ,
@@ -333,13 +508,13 @@ class Matrix3d:{xx: float, xy: float, xz: float,
 
 class CTime:{
       ts:int
-      time:float
+      time:float [tau]
 }
 \end{def}
 
 \begin{global_def}
 resume:{
-   Calculation: select {'NEW','CONTINUE'} "flg in order to specify resumed simulation or not"
+    Calculation: select {'NEW', 'CONTINUE', 'CONTINUE_FDM', 'CONTINUE_FDM_PHASE_SEPARATION'} "flg in order to specify resumed simulation or not"
    CONTINUE:{
       Saved_Data:{
          jikan: CTime
@@ -358,5 +533,72 @@ resume:{
          }		
       }
    }
+    CONTINUE_FDM: {
+        Saved_Data: {
+            jikan: CTime
+            Particles[]: sParticle
+            GR_body[]: Vector3d
+          	 GR_masses[]: float
+          	 GR_moments_body[]: Matrix3d
+            U[][][]: {
+                u0: float
+                u1: float
+                u2: float
+            }
+            U_OLD[][][]: {
+                u_old_0: float
+                u_old_1: float
+                u_old_2: float
+            }
+            oblique: {
+                degree_oblique: float
+            }
+        }
+    }
+    CONTINUE_FDM_PHASE_SEPARATION: {
+        Saved_Data: {
+            jikan: CTime
+            Particles[]: sParticle
+            GR_body[]: Vector3d
+          	 GR_masses[]: float
+          	 GR_moments_body[]: Matrix3d
+            U[][][]: {
+                u0: float
+                u1: float
+                u2: float
+            }
+            U_OLD[][][]: {
+                u_old_0: float
+                u_old_1: float
+                u_old_2: float
+            }
+            PSI[][][]: {
+                psi: float
+            }
+            PSI_OLD[][][]: {
+                psi_old: float
+            }
+            STRESS_OLD[][][]: {
+                stress_old_0: float
+                stress_old_1: float
+                stress_old_2: float
+            }
+            oblique: {
+                degree_oblique: float
+            }
+        }
+    }
 }
+
+//////////////////////////////////////////////////////////////////////////
+////////// (Variable) Reduced Parameters ////////////
+//////////////////////////////////////////////////////////////////////////
+Unit_Parameter:{
+	Name: string					"Name"
+	Comment:string					"Comment"
+	Temperature:double	[K]				"Temperature"
+	Length:double	[nm]				"Grid spacing"
+	rho:double	[g/cm^3]			"Fluid density"
+} "Parameters for unit conversion"
+
 \end{global_def}

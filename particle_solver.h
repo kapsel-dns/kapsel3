@@ -106,7 +106,12 @@ inline void Force(Particle *p) {
     }
 
     if (SW_MULTIPOLE == MULTIPOLE_ON) {
-        Calc_multipole_interaction_force_torque(p);
+        if (ewald_param.m_image == true) {
+            Calc_multipole_interaction_force_torque_with_image(p);
+        } else {
+            Calc_multipole_interaction_force_torque(p);
+        }
+        
     }
 }
 

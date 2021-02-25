@@ -92,7 +92,10 @@ struct ps_param {
     double init_fluct;
     double d;
     double w;
+<<<<<<< HEAD
     double w_wall;
+=======
+>>>>>>> d58174cf60c634f0ea1d0ec237f1bf4372d532b8
     double z;
     double alpha;
     double kappa;
@@ -212,11 +215,13 @@ extern void compute_particle_dipole_standard(double *mu_space, const double *mu_
     \param[in]  q orientation quaternion
 */
 extern void compute_particle_dipole_quincke(double *mu_space, const double *mu_body, quaternion &q);
+extern void compute_particle_dipole_quincke_image(double *mu_space, const double *mu_body, quaternion &q);
 
 /*!
     \brief Generic funtion pointer used to compute particle dipole
 */
 extern void (*compute_particle_dipole)(double *mu_space, const double *mu_body, quaternion &q);
+extern void (*compute_particle_dipole_image)(double *mu_space, const double *mu_body, quaternion &q);
 
 //////
 extern char Out_dir[];

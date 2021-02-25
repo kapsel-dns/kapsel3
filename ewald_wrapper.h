@@ -20,9 +20,11 @@ typedef struct EwaldParams {
     double delta   = EPSILON_MP;
     double conv    = 0.51;
     double epsilon = -1.0;  // tinfoil if < 0
+    double Pz_factor;
     bool   charge  = false;
     bool   dipole  = false;
     bool   enabled = false;
+    bool   m_image = false;
     void   init(double _alpha, double _delta, double _conv, double _eps, bool _charge, bool _dipole) {
         alpha   = _alpha;
         delta   = _delta;

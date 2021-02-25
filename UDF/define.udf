@@ -324,7 +324,7 @@ gravity: {
 
 EPSILON: double [epsilon] "Lennard-Jones depth"
 
-LJ_powers: select {'12:6','24:12','36:18','macro_vdw'} "set of power exponents of LJ potential" 
+LJ_powers: select {'12:6','24:12','36:18','macro_vdw','electro_osmotic_flow'} "set of power exponents of LJ potential" 
 
 mesh: {
    NPX: int "number of mesh in x-direction = 2^NPX"
@@ -413,6 +413,10 @@ switch: {
                FIXED:{
                   dir   : select{'X', 'Y', 'Z'} "direction of dipolar axis"
                }
+               QUINCKE:{
+                  type : select{'with_mirror_image','no_mirror_image'} "Mirror image component of electrode surface"
+                  Pz_factor : double "Pz strength += Pz_factor*magnitude"
+               }
             }
          }
          EwaldParams:{
@@ -422,7 +426,7 @@ switch: {
             epsilon : double "Permittivity at boundary ( if  negative, set to tinfoil)"
          }
       }
-    }
+   } 
 }
 
 output: {

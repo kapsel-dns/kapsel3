@@ -1028,6 +1028,7 @@ void Gourmet_file_io(const char *infile,
                         io_parser(target.sub("b"), gl.b);
                         io_parser(target.sub("d"), ps.d);
                         io_parser(target.sub("w"), ps.w);
+                        io_parser(target.sub("w_wall"), ps.w_wall);
                         io_parser(target.sub("z"), ps.z);
                         io_parser(target.sub("alpha"), ps.alpha);
                         io_parser(target.sub("kappa"), ps.kappa);
@@ -1041,6 +1042,7 @@ void Gourmet_file_io(const char *infile,
                         io_parser(target.sub("chi"), fh.chi);
                         io_parser(target.sub("d"), ps.d);
                         io_parser(target.sub("w"), ps.w);
+                        io_parser(target.sub("w_wall"), ps.w_wall);
                         io_parser(target.sub("z"), ps.z);
                         io_parser(target.sub("alpha"), ps.alpha);
                         io_parser(target.sub("kappa"), ps.kappa);

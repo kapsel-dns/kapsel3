@@ -46,9 +46,9 @@ void Init_lis(int argc, char *argv[]);
 void Mem_alloc_lis(void);
 void Free_lis(void);
 #else
-void                 Init_ns(void);
-void                 Init_ch(void);
-inline void          Calc_Ax(double *x, int *idx, double *val, int *row_ptr, double *ans, int iend) {
+void        Init_ns(void);
+void        Init_ch(void);
+inline void Calc_Ax(double *x, int *idx, double *val, int *row_ptr, double *ans, int iend) {
 #pragma omp parallel for
     for (int i = 0; i < iend; i++) {
         double sum = 0.;
@@ -106,15 +106,25 @@ void CHNS_MAC_solver_implicit_viscosity_OBL(double **    u,
                                             int          ie_ns);
 
 void CH_solver_implicit_euler(double *     psi,
+                              double *     psi_all,
                               double *     psi_o,
                               double *     phi,
+                              double *     phi_p,
+                              double *     phi_wall,
+                              double *     phi_wall_prime,
                               double **    u,
                               const CTime &jikan,
                               int          is_ch,
                               int          ie_ch);
+
 void CH_solver_implicit_bdfab(double *     psi,
+                              double *     psi_all,
                               double *     psi_o,
+                              double *     psi_all_o,
                               double *     phi,
+                              double *     phi_p,
+                              double *     phi_wall,
+                              double *     phi_wall_prime,
                               double **    u,
                               const CTime &jikan,
                               int          is_ch,
@@ -136,4 +146,6 @@ void CH_solver_implicit_bdfab_OBL(double *     psi,
                                   const double degree_oblique,
                                   int          is_ch,
                                   int          ie_ch);
+
+void Make_potential_deriv(double *f_prime, double *psi);
 #endif

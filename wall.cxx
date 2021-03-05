@@ -1,5 +1,7 @@
 #include "wall.h"
 
+#include "fdm.h"
+
 void Init_Wall(double* phi_wall) {
     if (SW_WALL == FLAT_WALL) {  // print wall params
         char              dmy[128];
@@ -40,6 +42,129 @@ void Init_Wall(double* phi_wall) {
                     rijk[2]      = static_cast<double>(k) * DX;
                     int im       = (i * NY * NZ_) + (j * NZ_) + k;
                     phi_wall[im] = (r < hl ? Phi(r, wall.lo) : 1.0 - Phi(r, wall.hi));
+                    if (k < hl) {
+                        grad_phi_wall[im] = -DPhi_compact_sin(r, wall.lo);
+                    } else {
+                        grad_phi_wall[im] = DPhi_compact_sin(r, wall.hi);
+                    }
+                }
+            }
+        }
+    }
+}
+
+void Init_bottom_Wall(double* phi_wall_prime, double* grad_phi_wall_prime) {
+    if (SW_WALL == FLAT_WALL) {  // print wall params
+        char              dmy[128];
+        static const char axis[]    = {'x', 'y', 'z'};
+        double            b_wall_lo = 0.5 * wall.lo;
+        double            b_wall_hi = wall.hi + b_wall_lo;
+        sprintf(dmy,
+                "phi_bottom_wall_%dx%dx%d_h%c%d.dat",
+                Ns[0],
+                Ns[1],
+                Ns[2],
+                axis[wall.axis],
+                static_cast<int>((b_wall_hi - b_wall_lo) / DX));
+
+        FILE*  fwall = filecheckopen(dmy, "w");
+        double dr    = DX;
+        double l     = L[wall.axis];
+        double hl    = l / 2.0;
+        double r     = 0.0;
+        double phiw  = 0.0;
+        double rx    = 0;
+        while (r <= l) {
+            rx   = r - b_wall_lo;
+            phiw = (r < hl ? Phi(abs(rx), b_wall_lo) : 1.0 - Phi(abs(rx), b_wall_hi));
+            fprintf(fwall, "%.5f %.5f\n", r, phiw);
+            r += dr;
+        }
+        fclose(fwall);
+    }
+
+    {  // compute wall phi field
+        double  rijk[DIM] = {0.0, 0.0, 0.0};
+        double& r         = rijk[wall.axis];
+        double  hl        = HL[wall.axis];
+        double  b_wall_lo = 0.5 * wall.lo;
+        double  b_wall_hi = wall.hi + b_wall_lo;
+        int     wall_lo_z = 0;
+        int     wall_hi_z = (int)wall.lo;
+
+        for (int i = 0; i < NX; i++) {
+            rijk[0] = static_cast<double>(i) * DX;
+
+            for (int j = 0; j < NY; j++) {
+                rijk[1] = static_cast<double>(j) * DX;
+
+                for (int k = 0; k < NZ; k++) {
+                    rijk[2]            = static_cast<double>(k) * DX;
+                    int    im          = (i * NY * NZ_) + (j * NZ_) + k;
+                    double rx          = r - b_wall_lo;
+                    phi_wall_prime[im] = (r < hl ? Phi(abs(rx), b_wall_lo) : 1.0 - Phi(abs(rx), b_wall_hi));
+
+                    if (k == wall_lo_z) {
+                        grad_phi_wall_prime[im] = 1.;
+                    } else if (k == wall_hi_z) {
+                        grad_phi_wall_prime[im] = -1.;
+                    } else {
+                        grad_phi_wall_prime[im] = 0.;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void Init_top_Wall(double* phi_wall_double_prime) {
+    if (SW_WALL == FLAT_WALL) {  // print wall params
+        char              dmy[128];
+        static const char axis[]    = {'x', 'y', 'z'};
+        double            b_wall_lo = 0.5 * wall.lo;
+        double            b_wall_hi = wall.hi + b_wall_lo;
+        sprintf(dmy,
+                "phi_top_wall_%dx%dx%d_h%c%d.dat",
+                Ns[0],
+                Ns[1],
+                Ns[2],
+                axis[wall.axis],
+                static_cast<int>((b_wall_hi - b_wall_lo) / DX));
+
+        FILE*  fwall = filecheckopen(dmy, "w");
+        double dr    = DX;
+        double l     = L[wall.axis];
+        double hl    = l / 2.0;
+        double r     = 0.0;
+        double phiw  = 0.0;
+        double rx    = 0;
+        while (r <= l) {
+            rx   = r + b_wall_lo;
+            phiw = (r < hl ? Phi(abs(rx), b_wall_lo) : 1.0 - Phi(abs(rx), b_wall_hi));
+            fprintf(fwall, "%.5f %.5f\n", r, phiw);
+            r += dr;
+        }
+        fclose(fwall);
+    }
+
+    {  // compute wall phi field
+        double  rijk[DIM] = {0.0, 0.0, 0.0};
+        double& r         = rijk[wall.axis];
+        double  hl        = HL[wall.axis];
+        double  b_wall_lo = 0.5 * wall.lo;
+        double  b_wall_hi = wall.hi + b_wall_lo;
+
+        for (int i = 0; i < NX; i++) {
+            rijk[0] = static_cast<double>(i) * DX;
+
+            for (int j = 0; j < NY; j++) {
+                rijk[1] = static_cast<double>(j) * DX;
+
+                for (int k = 0; k < NZ; k++) {
+                    rijk[2]                   = static_cast<double>(k) * DX;
+                    int    im                 = (i * NY * NZ_) + (j * NZ_) + k;
+                    double rx                 = r + b_wall_lo;
+                    phi_wall_double_prime[im] = (r < hl ? Phi(abs(rx), b_wall_lo) : 1.0 - Phi(abs(rx), b_wall_hi));
                 }
             }
         }

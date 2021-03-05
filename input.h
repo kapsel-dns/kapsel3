@@ -88,15 +88,19 @@ struct fh_param {
     double chi;
 };
 struct ps_param {
-    double ratio;
-    double init_fluct;
-    double d;
-    double w;
-    double w_wall;
-    double z;
-    double alpha;
-    double kappa;
-    double neutral;
+    double  ratio;
+    double  init_fluct;
+    double  d;
+    double  w;
+    double  w_wall;
+    double  z;
+    double  alpha;
+    double  kappa;
+    double  neutral;
+    double *neutral_wall;
+    double  psi_0_p;
+    double *psi_0_wall;
+    double  psi_dry;
 };
 extern gl_param gl;
 extern fh_param fh;
@@ -256,6 +260,7 @@ extern int &TRN_Z;
 extern int &TRN_QS_X;
 extern int &TRN_QS_Y;
 extern int &TRN_QS_Z;
+extern int  System_Size;
 
 //////
 extern int         ROTATION;

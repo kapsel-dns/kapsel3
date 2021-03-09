@@ -741,28 +741,15 @@ void Gourmet_file_io(const char *infile,
 
     /////// 計算条件の設定
     {
-        Location target("constitutive_eq.Navier_Stokes_Cahn_Hilliard_FDM.Potential.Landau.psi_0_wall");
-        string   str;
-        io_parser(target.sub("type"), str);
-        if (str == "uniform") {
-            int      x_dmy, y_dmy, z_dmy;
-            Location target("mesh");
-            io_parser(target.sub("NPX"), x_dmy);
-            io_parser(target.sub("NPY"), y_dmy);
-            io_parser(target.sub("NPZ"), z_dmy);
-            NX = 1 << x_dmy;
-            NY = 1 << y_dmy;
-            NZ = 1 << z_dmy;
-        } else if (str == "user_specify") {
-            int      x_dmy, y_dmy, z_dmy;
-            Location target("mesh");
-            io_parser(target.sub("NPX"), x_dmy);
-            io_parser(target.sub("NPY"), y_dmy);
-            io_parser(target.sub("NPZ"), z_dmy);
-            NX = 1 << x_dmy;
-            NY = 1 << y_dmy;
-            NZ = 1 << z_dmy;
-        }
+        Location target("mesh");
+        int      x_dmy, y_dmy, z_dmy;
+        io_parser(target.sub("NPX"), x_dmy);
+        io_parser(target.sub("NPY"), y_dmy);
+        io_parser(target.sub("NPZ"), z_dmy);
+        NX = 1 << x_dmy;
+        NY = 1 << y_dmy;
+        NZ = 1 << z_dmy;
+
         ps.psi_0_wall   = alloc_1d_double(NX * NY * (NZ + 2));
         ps.neutral_wall = alloc_1d_double(NX * NY * (NZ + 2));
     }
@@ -1093,8 +1080,15 @@ void Gourmet_file_io(const char *infile,
                                 }
                             }
                         } else {
-                            fprintf(stderr, "invalid PSI_0_WALL TYPE\n");
-                            exit_job(EXIT_FAILURE);
+                            for (int i = 0; i < NX; i++) {
+                                for (int j = 0; j < NY; j++) {
+                                    for (int k = 0; k < NZ; k++) {
+                                        int im            = (i * NY * (NZ + 2)) + (j * (NZ + 2)) + k;
+                                        ps.psi_0_wall[im] = 0.;
+                                    }
+                                }
+                            }
+                            fprintf(stderr, "psi_0_wall = 0\n");
                         }
                     } else if (str == "Flory_Huggins") {
                         SW_POTENTIAL = Flory_Huggins;
@@ -1245,6 +1239,7 @@ void Gourmet_file_io(const char *infile,
                         io_parser(target.sub("b"), gl.b);
                         io_parser(target.sub("d"), ps.d);
                         io_parser(target.sub("w"), ps.w);
+                        io_parser(target.sub("z"), ps.z);
                         io_parser(target.sub("alpha"), ps.alpha);
                         io_parser(target.sub("kappa"), ps.kappa);
                     } else if (str == "Flory_Huggins") {
@@ -1257,6 +1252,7 @@ void Gourmet_file_io(const char *infile,
                         io_parser(target.sub("chi"), fh.chi);
                         io_parser(target.sub("d"), ps.d);
                         io_parser(target.sub("w"), ps.w);
+                        io_parser(target.sub("z"), ps.z);
                         io_parser(target.sub("alpha"), ps.alpha);
                         io_parser(target.sub("kappa"), ps.kappa);
                     } else {

@@ -887,7 +887,7 @@ int main(int argc, char *argv[]) {
 
     if ((SW_EQ == Shear_Navier_Stokes) || (SW_EQ == Shear_Navier_Stokes_Lees_Edwards) ||
         (SW_EQ == Shear_Navier_Stokes_Lees_Edwards_FDM) || (SW_EQ == Shear_NS_LE_CH_FDM)) {
-        Mean_shear_stress(INIT, stderr, particles, jikan, Shear_rate_eff);
+        Mean_shear_stress(INIT, stdout, particles, jikan, Shear_rate_eff);
     } else if (SW_EQ == Electrolyte) {
         Electrolyte_free_energy(INIT, stderr, particles, Concentration, jikan);
     }
@@ -1006,7 +1006,7 @@ Shear_NS_LE_CH_FDM) { calc_shear_rate_field(u, shear_rate_field);
         } else if (SW_EQ == Shear_Navier_Stokes_Lees_Edwards || SW_EQ == Shear_Navier_Stokes_Lees_Edwards_FDM ||
                    SW_EQ == Shear_NS_LE_CH_FDM) {
             Shear_strain_realized += Shear_rate_eff * jikan.dt_fluid;
-            Mean_shear_stress(SHOW, stderr, particles, jikan, Shear_rate_eff);
+            Mean_shear_stress(SHOW, stdout, particles, jikan, Shear_rate_eff);
         }
 
         if (jikan.ts == MSTEP) {

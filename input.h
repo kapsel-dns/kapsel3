@@ -101,6 +101,7 @@ struct ps_param {
     double  psi_0_p;
     double *psi_0_wall;
     double  psi_dry;
+    double  xi;
 };
 extern gl_param gl;
 extern fh_param fh;

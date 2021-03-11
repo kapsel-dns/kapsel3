@@ -162,6 +162,8 @@ constitutive_eq: {
           b: double "GL parameter (first order term)"
           d: double "penalty factor in fictitious particle domain"
           w: double "penalty factor on particle surface domain"
+          k: double "penalty factor on wall surface domain"
+          z: double ""
           alpha: double "surface parameter on fluid-fluid surface"
           kappa: double "mobility parameter"
        }

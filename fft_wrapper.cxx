@@ -18,11 +18,12 @@ ooura_plan ooura_p;
 #endif
 
 double **ucp;
-double * phi, *phi_sum, **up, **u, *rhop, *phi_wall;
+double * phi, *phi_p, *phi_sum, *phi_s, **up, **u, *rhop, *phi_wall, *phi_wall_prime, *phi_wall_double_prime, **flux;
+double * psi_all, *psi_all_o, *f_prime, *f_prime_o, *grad_phi_wall, *grad_phi_wall_prime, *neutral_phi_wall_prime;
 double **work_v3, **work_v2, *work_v1;
-
-int *   KX_int, *KY_int, *KZ_int;
-double *K2, *IK2;
+double **I, **ns, ***coef;
+int *    KX_int, *KY_int, *KZ_int;
+double * K2, *IK2;
 
 splineSystem **splineOblique;
 double ***     uspline;

@@ -296,6 +296,8 @@ inline double calc_gradient_norm(double *phi, int im) {
     return grad_phi_norm;
 }
 
+inline double calc_gradient_norm_sqrt(double *phi, int im) { return sqrt(calc_gradient_norm(phi, im)); }
+
 inline double calc_gradient_norm_OBL(double *phi, int im, const double gt) {
     double dphi_dx_co = calc_gradient_o1_to_o1(phi, im, 0);
     double dphi_dy_co = calc_gradient_o1_to_o1(phi, im, 1);
@@ -722,6 +724,63 @@ inline double calc_gamma(double **u, int im) {
 
     return sqrt(invariant_half);
 }
+
+inline double calc_div_tensor_gradient_inner(const double ***tensor, const double *field, int im) {
+    const double INV_DX  = 1. / DX;
+    const double INV_DX2 = 1. / (DX * DX);
+    int          i, j, k;
+
+    im2ijk(im, &i, &j, &k);
+
+    // periodic boundary condition
+    int ip1, jp1, kp1;
+    int im1, jm1, km1;
+
+    ip1 = adj(1, i, NX);
+    jp1 = adj(1, j, NY);
+    kp1 = adj(1, k, NZ);
+
+    im1 = adj(-1, i, NX);
+    jm1 = adj(-1, j, NY);
+    km1 = adj(-1, k, NZ);
+
+    double dxdx = (field[ijk2im(ip1, j, k)] + field[ijk2im(im1, j, k)] - 2. * field[im]) * INV_DX2;
+    double dxdy =
+        (field[ijk2im(i, jp1, k)] - field[im] - field[ijk2im(im1, jp1, k)] + field[ijk2im(im1, j, k)]) * INV_DX2;
+    double dxdz =
+        (field[ijk2im(i, j, kp1)] - field[im] - field[ijk2im(im1, j, kp1)] + field[ijk2im(im1, j, k)]) * INV_DX2;
+
+    double dydx =
+        (field[ijk2im(ip1, j, k)] - field[im] - field[ijk2im(ip1, jm1, k)] + field[ijk2im(i, jm1, k)]) * INV_DX2;
+    double dydy = (field[ijk2im(i, jp1, k)] + field[ijk2im(i, jm1, k)] - 2. * field[im]) * INV_DX2;
+    double dydz =
+        (field[ijk2im(i, j, kp1)] - field[im] - field[ijk2im(i, jm1, kp1)] + field[ijk2im(i, jm1, k)]) * INV_DX2;
+
+    double dzdx =
+        (field[ijk2im(ip1, j, k)] - field[im] - field[ijk2im(ip1, j, km1)] + field[ijk2im(i, j, km1)]) * INV_DX2;
+    double dzdy =
+        (field[ijk2im(i, jp1, k)] - field[im] - field[ijk2im(i, jp1, km1)] + field[ijk2im(i, j, km1)]) * INV_DX2;
+    double dzdz = (field[ijk2im(i, j, kp1)] + field[ijk2im(i, j, km1)] - 2. * field[im]) * INV_DX2;
+
+    double x_term = tensor[0][0][im] * dxdx + tensor[0][1][im] * dxdy + tensor[0][2][im] * dxdz +
+                    calc_gradient_o1_to_o1(tensor[0][0], im, 0) * calc_gradient_o1_to_o1(field, im, 0) +
+                    calc_gradient_o1_to_o1(tensor[0][1], im, 0) * calc_gradient_o1_to_o1(field, im, 1) +
+                    calc_gradient_o1_to_o1(tensor[0][2], im, 0) * calc_gradient_o1_to_o1(field, im, 2);
+    double y_term = tensor[1][0][im] * dydx + tensor[1][1][im] * dydy + tensor[1][2][im] * dydz +
+                    calc_gradient_o1_to_o1(tensor[1][0], im, 1) * calc_gradient_o1_to_o1(field, im, 0) +
+                    calc_gradient_o1_to_o1(tensor[1][1], im, 1) * calc_gradient_o1_to_o1(field, im, 1) +
+                    calc_gradient_o1_to_o1(tensor[1][2], im, 1) * calc_gradient_o1_to_o1(field, im, 2);
+    double z_term = tensor[2][0][im] * dzdx + tensor[2][1][im] * dzdy + tensor[2][2][im] * dzdz +
+                    calc_gradient_o1_to_o1(tensor[2][0], im, 2) * calc_gradient_o1_to_o1(field, im, 0) +
+                    calc_gradient_o1_to_o1(tensor[2][1], im, 2) * calc_gradient_o1_to_o1(field, im, 1) +
+                    calc_gradient_o1_to_o1(tensor[2][2], im, 2) * calc_gradient_o1_to_o1(field, im, 2);
+
+    double retval = x_term + y_term + z_term;
+
+    return retval;
+}
+
+void Make_psi_all(double *psi_all, double const *psi);
 
 void NS_solver_slavedEuler_explicit(double **u, double *Pressure, Particle *p, CTime &jikan);
 void NS_solver_slavedEuler_implicit(double **u, double *Pressure, Particle *p, CTime &jikan);

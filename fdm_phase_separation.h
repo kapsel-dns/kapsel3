@@ -35,6 +35,9 @@ inline double potential_deriv(double x) {
 }
 
 void Calc_cp(double *phi, double *psi, double *cp);
+void Calc_cp_wall(double *phi, double *phi_p, double *phi_wall_prime, double *psi_all, double *cp);
+void Calc_flux(double **flux, double **u, double *psi_all, double *cp);
+void Calc_coef(double ***coef, double *phi_p, double *phi_wall_prime);
 void Calc_cp_OBL(double *phi, double *psi, double *cp, const double degree_oblique);
 
 void Cp2stress(double *cp, double *psi, double **stress);
@@ -61,7 +64,14 @@ void Set_poisson_rhs_viscosity_OBL(double **u,
 void Update_u_stress_euler(double **u, double **stress, CTime &jikan);
 void Update_u_stress_ab2(double **u, double **stress, double **stress_o, CTime &jikan);
 
-void Update_psi_euler(double *psi, double **u, double *phi, double *cp, CTime &jikan);
+void Update_psi_euler(double *  psi_all,
+                      double *  psi,
+                      double ** u,
+                      double *  phi,
+                      double *  phi_wall,
+                      double *  cp,
+                      double ***coef,
+                      CTime &   jikan);
 void Update_psi_euler_OBL(double *psi, double **u, double *cp, CTime &jikan, const double degree_oblique);
 
 void Init_phase_separation(double *phi, double *psi);

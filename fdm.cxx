@@ -17,6 +17,19 @@ double * shear_rate_field;
 
 double sreff_old;
 
+void        Make_psi_all(double *psi_all, double const *psi) {
+#pragma omp parallel for
+    for (int i = 0; i < NX; i++) {
+        for (int j = 0; j < NY; j++) {
+            for (int k = 0; k < NZ; k++) {
+                int im      = (i * NY * NZ_) + (j * NZ_) + k;
+                psi_all[im] = psi[im] + ps.psi_0_p * phi_p[im] + ps.psi_0_wall[im] * phi_wall_prime[im] +
+                              ps.psi_dry * phi_wall_double_prime[im];
+            }
+        }
+    }
+}
+
 void NS_solver_slavedEuler_explicit(double **u, double *Pressure, Particle *p, CTime &jikan) {
     if (jikan.ts > 0) {
         Cpy_v3(adv_o, adv);
@@ -37,8 +50,8 @@ void NS_solver_slavedEuler_explicit(double **u, double *Pressure, Particle *p, C
     Update_u_lap_euler(u, lap, jikan);
 
     if (PHASE_SEPARATION) {
-        Calc_cp(phi, psi, cp);
-        Cp2stress(cp, psi, stress);
+        Calc_cp(phi, psi_all, cp);
+        Cp2stress(cp, psi_all, stress);
 
         if (jikan.ts < 2) {
             Update_u_stress_euler(u, stress, jikan);
@@ -67,19 +80,22 @@ void NS_solver_slavedEuler_implicit(double **u, double *Pressure, Particle *p, C
     U2laplacian(u_s, lap);
 
     if (PHASE_SEPARATION) {
-        // psi_s -> w_v3[0]
+        // psi_all_s -> w_v3[0]
         // phi_s -> w_v3[1]
         // phi_sum -> w_v3[2] (dummy working memory)
         // cp_s -> cp
         // stress_s -> stress
 
-        Calc_ab2_val(w_v3[0], psi, psi_o);
+        Calc_ab2_val(w_v3[0], psi_all, psi_all_o);
 
         Reset_phi(w_v3[1]);
         Reset_phi(w_v3[2]);
         Make_phi_s(w_v3[1], w_v3[2], p, DX, NP_domain, Sekibun_cell, Ns, jikan);
-
-        Calc_cp(w_v3[1], w_v3[0], cp);
+        if (SW_WALL != NO_WALL) {
+            Calc_cp_wall(w_v3[1], phi_p, phi_wall_prime, w_v3[0], cp);
+        } else {
+            Calc_cp(w_v3[1], w_v3[0], cp);
+        }
         Cp2stress(cp, w_v3[0], stress);
 
         if (VISCOSITY_CHANGE) {
@@ -584,14 +600,16 @@ void Mem_alloc_fdm(void) {
     w_v3_3 = alloc_2d_double(DIM, NX * NY * NZ_);
 
     if (PHASE_SEPARATION) {
-        stress   = alloc_2d_double(DIM, NX * NY * NZ_);
-        stress_o = alloc_2d_double(DIM, NX * NY * NZ_);
-        cp       = alloc_1d_double(NX * NY * NZ_);
-        psi      = alloc_1d_double(NX * NY * NZ_);
-        psi_o    = alloc_1d_double(NX * NY * NZ_);
-        psicp    = alloc_1d_double(NX * NY * NZ_);
-        psicp_o  = alloc_1d_double(NX * NY * NZ_);
-        phi_obl  = alloc_1d_double(NX * NY * NZ_);
+        stress    = alloc_2d_double(DIM, NX * NY * NZ_);
+        stress_o  = alloc_2d_double(DIM, NX * NY * NZ_);
+        cp        = alloc_1d_double(NX * NY * NZ_);
+        psi       = alloc_1d_double(NX * NY * NZ_);
+        psi_all   = alloc_1d_double(NX * NY * NZ_);
+        psi_o     = alloc_1d_double(NX * NY * NZ_);
+        psi_all_o = alloc_1d_double(NX * NY * NZ_);
+        psicp     = alloc_1d_double(NX * NY * NZ_);
+        psicp_o   = alloc_1d_double(NX * NY * NZ_);
+        phi_obl   = alloc_1d_double(NX * NY * NZ_);
     }
 
     if (VISCOSITY_CHANGE) {
@@ -618,7 +636,9 @@ void Free_fdm(void) {
         free_2d_double(stress_o);
         free_1d_double(cp);
         free_1d_double(psi);
+        free_1d_double(psi_all);
         free_1d_double(psi_o);
+        free_1d_double(psi_all_o);
         free_1d_double(psicp);
         free_1d_double(psicp_o);
         free_1d_double(phi_obl);

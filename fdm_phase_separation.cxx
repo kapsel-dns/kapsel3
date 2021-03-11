@@ -22,10 +22,136 @@ void        Calc_cp(double *phi, double *psi, double *cp) {
                 double dphi_dy = calc_gradient_o1_to_o1(phi, im, 1);
                 double dphi_dz = calc_gradient_o1_to_o1(phi, im, 2);
 
+                double dpsi_dx = calc_gradient_o1_to_o1(psi, im, 0);
+                double dpsi_dy = calc_gradient_o1_to_o1(psi, im, 1);
+                double dpsi_dz = calc_gradient_o1_to_o1(psi, im, 2);
+
                 double grad_phi_norm = dphi_dx * dphi_dx + dphi_dy * dphi_dy + dphi_dz * dphi_dz;
 
-                cp[im] = potential_deriv(psi[im]) - ps.alpha * lap_psi + ps.w * A_XI * grad_phi_norm +
-                         2. * ps.d * (psi[im] - ps.neutral) * phi[im];
+                cp[im] = potential_deriv(psi[im]) - (ps.alpha + 2. * ps.z * phi[im]) * lap_psi -
+                         2. * ps.z * (dphi_dx * dpsi_dx + dphi_dy * dpsi_dy + dphi_dz * dpsi_dz) +
+                         ps.w * A_XI * grad_phi_norm + 2. * ps.d * (psi[im] - ps.neutral) * phi[im];
+            }
+        }
+    }
+}
+void        Calc_cp_wall(double *phi, double *phi_p, double *phi_wall_prime, double *psi_all, double *cp) {
+#pragma omp parallel for
+    for (int i = 0; i < NX; i++) {
+        for (int j = 0; j < NY; j++) {
+            for (int k = 0; k < NZ; k++) {
+                int im = (i * NY * NZ_) + (j * NZ_) + k;
+
+                double lap_psi      = calc_laplacian(psi_all, im);
+                double dphi_dx      = calc_gradient_o1_to_o1(phi_p, im, 0);
+                double dphi_dy      = calc_gradient_o1_to_o1(phi_p, im, 1);
+                double dphi_dz      = calc_gradient_o1_to_o1(phi_p, im, 2);
+                double dphi_wall_dx = calc_gradient_o1_to_o1(phi_wall, im, 0);
+                double dphi_wall_dy = calc_gradient_o1_to_o1(phi_wall, im, 1);
+                double dphi_wall_dz = calc_gradient_o1_to_o1(phi_wall, im, 2);
+                double dpsi_dx      = calc_gradient_o1_to_o1(psi_all, im, 0);
+                double dpsi_dy      = calc_gradient_o1_to_o1(psi_all, im, 1);
+                double dpsi_dz      = calc_gradient_o1_to_o1(psi_all, im, 2);
+
+                double grad_phi_norm = dphi_dx * dphi_dx + dphi_dy * dphi_dy + dphi_dz * dphi_dz;
+                double grad_phi_wall_norm =
+                    dphi_wall_dx * dphi_wall_dx + dphi_wall_dy * dphi_wall_dy + dphi_wall_dz * dphi_wall_dz;
+
+                cp[im] = potential_deriv(psi_all[im]) - (ps.alpha + 2. * ps.z * phi[im]) * lap_psi -
+                         2.0 * ps.z * (dphi_dx * dpsi_dx + dphi_dy * dpsi_dy + dphi_dz * dpsi_dz) +
+                         ps.w * A_XI * grad_phi_norm + ps.w_wall * A_XI * grad_phi_wall_norm +
+                         2. * ps.d * (psi_all[im] - ps.neutral) * phi_p[im] +
+                         2. * ps.d * (psi_all[im] - ps.neutral_wall[im]) * phi_wall_prime[im];
+            }
+        }
+    }
+}
+
+void Calc_flux(double **flux, double **u, double *psi_all, double *cp) {
+    if (SW_WALL != NO_WALL) {
+        Calc_cp_wall(phi, phi_p, phi_wall_prime, psi_all, cp);
+    } else {
+        Calc_cp(phi, psi_all, cp);
+    }
+#pragma omp parallel for
+    for (int i = 0; i < NX; i++) {
+        for (int j = 0; j < NY; j++) {
+            for (int k = 0; k < NZ; k++) {
+                int im = (i * NY * NZ_) + (j * NZ_) + k;
+
+                double dcp_dx = calc_gradient_o1_to_o1(cp, im, 0);
+                double dcp_dy = calc_gradient_o1_to_o1(cp, im, 1);
+                double dcp_dz = calc_gradient_o1_to_o1(cp, im, 2);
+
+                if (ps.psi_dry != 0.0) {
+                    flux[0][im] = psi_all[im] * u[0][im] -
+                                  ps.kappa * (1. - phi_wall[im]) *
+                                      (coef[0][0][im] * dcp_dx + coef[0][1][im] * dcp_dy + coef[0][2][im] * dcp_dz);
+                    flux[1][im] = psi_all[im] * u[1][im] -
+                                  ps.kappa * (1. - phi_wall[im]) *
+                                      (coef[1][0][im] * dcp_dx + coef[1][1][im] * dcp_dy + coef[1][2][im] * dcp_dz);
+                    flux[2][im] = psi_all[im] * u[2][im] -
+                                  ps.kappa * (1. - phi_wall[im]) *
+                                      (coef[2][0][im] * dcp_dx + coef[2][1][im] * dcp_dy + coef[2][2][im] * dcp_dz);
+                } else {
+                    flux[0][im] = psi_all[im] * u[0][im] - ps.kappa * calc_gradient_o1_to_o1(cp, im, 0);
+                    flux[1][im] = psi_all[im] * u[1][im] - ps.kappa * calc_gradient_o1_to_o1(cp, im, 1);
+                    flux[2][im] = psi_all[im] * u[2][im] - ps.kappa * calc_gradient_o1_to_o1(cp, im, 2);
+                }
+            }
+        }
+    }
+}
+
+void        Calc_coef(double ***coef, double *phi_p, double *phi_wall_prime) {
+#pragma omp parallel for
+    for (int d = 0; d < DIM; d++) {
+        for (int i = 0; i < NX; i++) {
+            for (int j = 0; j < NY; j++) {
+                for (int k = 0; k < NZ; k++) {
+                    int    im        = (i * NY * NZ_) + (j * NZ_) + k;
+                    double dphi_p_dx = calc_gradient_o1_to_o1(phi_p, im, 0);
+                    double dphi_p_dy = calc_gradient_o1_to_o1(phi_p, im, 1);
+                    double dphi_p_dz = calc_gradient_o1_to_o1(phi_p, im, 2);
+                    double grad_phi_norm =
+                        dphi_p_dx * dphi_p_dx + dphi_p_dy * dphi_p_dy +
+                        (dphi_p_dz + grad_phi_wall_prime[im]) * (dphi_p_dz + grad_phi_wall_prime[im]);
+                    double grad_phi_norm_sqrt = sqrt(grad_phi_norm);
+                    if (grad_phi_norm_sqrt != 0.) {
+                        if (d == 2) {
+                            ns[d][im] = -(dphi_p_dz + grad_phi_wall_prime[im]) / grad_phi_norm_sqrt;
+                        } else {
+                            ns[d][im] = -calc_gradient_o1_to_o1(phi_p, im, d) / grad_phi_norm_sqrt;
+                        }
+                    } else {
+                        ns[d][im] = 0.;
+                    }
+                }
+            }
+        }
+    }
+
+#pragma omp parallel for
+    for (int d1 = 0; d1 < DIM; d1++) {  // make unit tensor for 3D
+        for (int d2 = 0; d2 < DIM; d2++) {
+            if (d1 == d2) {
+                I[d1][d2] = 1.;
+            } else {
+                I[d1][d2] = 0.;
+            }
+        }
+    }
+
+#pragma omp parallel for
+    for (int d1 = 0; d1 < DIM; d1++) {
+        for (int d2 = 0; d2 < DIM; d2++) {
+            for (int i = 0; i < NX; i++) {
+                for (int j = 0; j < NY; j++) {
+                    for (int k = 0; k < NZ; k++) {
+                        int im           = (i * NY * NZ_) + (j * NZ_) + k;
+                        coef[d1][d2][im] = I[d1][d2] - ns[d1][im] * ns[d2][im];
+                    }
+                }
             }
         }
     }
@@ -44,6 +170,14 @@ void        Calc_cp_OBL(double *phi, double *psi, double *cp, const double degre
                 double dphi_dy_co = calc_gradient_o1_to_o1(phi, im, 1);
                 double dphi_dz_co = calc_gradient_o1_to_o1(phi, im, 2);
 
+                double dphi_dx = calc_gradient_o1_to_o1(phi, im, 0);
+                double dphi_dy = calc_gradient_o1_to_o1(phi, im, 1);
+                double dphi_dz = calc_gradient_o1_to_o1(phi, im, 2);
+
+                double dpsi_dx = calc_gradient_o1_to_o1(psi, im, 0);
+                double dpsi_dy = calc_gradient_o1_to_o1(psi, im, 1);
+                double dpsi_dz = calc_gradient_o1_to_o1(psi, im, 2);
+
                 double dphi_dx_contra =
                     ((1. + degree_oblique * degree_oblique) * dphi_dx_co) - (degree_oblique * dphi_dy_co);
                 double dphi_dy_contra = -(degree_oblique * dphi_dx_co) + dphi_dy_co;
@@ -52,8 +186,9 @@ void        Calc_cp_OBL(double *phi, double *psi, double *cp, const double degre
                 double grad_phi_norm =
                     dphi_dx_co * dphi_dx_contra + dphi_dy_co * dphi_dy_contra + dphi_dz_co * dphi_dz_contra;
 
-                cp[im] = potential_deriv(psi[im]) - ps.alpha * lap_psi + ps.w * A_XI * grad_phi_norm +
-                         2. * ps.d * (psi[im] - ps.neutral) * phi[im];
+                cp[im] = potential_deriv(psi[im]) - (ps.alpha + 2. * ps.z * phi[im]) * lap_psi -
+                         2. * ps.z * (dphi_dx * dpsi_dx + dphi_dy * dpsi_dy + dphi_dz * dpsi_dz) +
+                         ps.w * A_XI * grad_phi_norm + 2. * ps.d * (psi[im] - ps.neutral) * phi[im];
             }
         }
     }
@@ -244,14 +379,36 @@ void        Update_u_stress_ab2(double **u, double **stress, double **stress_o, 
         }
     }
 }
-void        Update_psi_euler(double *psi, double **u, double *phi, double *cp, CTime &jikan) {
+void Update_psi_euler(double *  psi_all,
+                      double *  psi,
+                      double ** u,
+                      double *  phi,
+                      double *  phi_wall,
+                      double *  cp,
+                      double ***coef,
+                      CTime &   jikan) {
+    double  INV_2DX = 1. / (2. * DX);
+    double *coef_dmu_dx, *coef_dmu_dy, *coef_dmu_dz;
+
+    coef_dmu_dx = alloc_1d_double(NX * NY * NZ_);
+    coef_dmu_dy = alloc_1d_double(NX * NY * NZ_);
+    coef_dmu_dz = alloc_1d_double(NX * NY * NZ_);
+
 #pragma omp parallel for
     for (int i = 0; i < NX; i++) {
         for (int j = 0; j < NY; j++) {
             for (int k = 0; k < NZ; k++) {
                 for (int d = 0; d < DIM; d++) {
-                    int im        = (i * NY * NZ_) + (j * NZ_) + k;
-                    w_v3_3[d][im] = psi[im] * u[d][im];
+                    int im = (i * NY * NZ_) + (j * NZ_) + k;
+
+                    double dcp_dx = calc_gradient_o1_to_o1(cp, im, 0);
+                    double dcp_dy = calc_gradient_o1_to_o1(cp, im, 1);
+                    double dcp_dz = calc_gradient_o1_to_o1(cp, im, 2);
+
+                    coef_dmu_dx[im] = coef[0][0][im] * dcp_dx + coef[0][1][im] * dcp_dy + coef[0][2][im] * dcp_dz;
+                    coef_dmu_dy[im] = coef[1][0][im] * dcp_dx + coef[1][1][im] * dcp_dy + coef[1][2][im] * dcp_dz;
+                    coef_dmu_dz[im] = coef[2][0][im] * dcp_dx + coef[2][1][im] * dcp_dy + coef[2][2][im] * dcp_dz;
+                    w_v3_3[d][im]   = psi_all[im] * u[d][im];
                 }
             }
         }
@@ -260,12 +417,32 @@ void        Update_psi_euler(double *psi, double **u, double *phi, double *cp, C
     for (int i = 0; i < NX; i++) {
         for (int j = 0; j < NY; j++) {
             for (int k = 0; k < NZ; k++) {
-                int    im             = (i * NY * NZ_) + (j * NZ_) + k;
-                double lap_term       = ps.kappa * calc_laplacian(cp, im);
+                int im = (i * NY * NZ_) + (j * NZ_) + k;
+                int ip1, im1, jp1, jm1, kp1, km1;
+                ip1 = adj(1, i, NX);
+                jp1 = adj(1, j, NY);
+                kp1 = adj(1, k, NZ);
+                im1 = adj(-1, i, NX);
+                jm1 = adj(-1, j, NY);
+                km1 = adj(-1, k, NZ);
+
                 double advective_term = calc_gradient_o1_to_o1(w_v3_3[0], im, 0) +
                                         calc_gradient_o1_to_o1(w_v3_3[1], im, 1) +
                                         calc_gradient_o1_to_o1(w_v3_3[2], im, 2);
-                psi[im] += jikan.dt_fluid * (-advective_term + lap_term);
+                double lap_term = ps.kappa * calc_laplacian(cp, im);
+                double grad_term =
+                    ps.kappa * (1. - phi_wall[im]) *
+                    (calc_gradient_o1_to_o1(coef_dmu_dx, im, 0) + calc_gradient_o1_to_o1(coef_dmu_dy, im, 1) +
+                     calc_gradient_o1_to_o1(coef_dmu_dz, im, 2));
+
+                if (ps.psi_dry != 0.0) {
+                    psi_all[im] += jikan.dt_fluid * (-advective_term + grad_term);
+                    psi[im] = psi_all[im] - ps.neutral * phi_p[im] - ps.neutral_wall[im] * phi_wall_prime[im] -
+                              ps.psi_dry * phi_wall_double_prime[im];
+                } else {
+                    psi_all[im] += jikan.dt_fluid * (-advective_term + lap_term);
+                    psi[im] = psi_all[im] - ps.neutral * phi_p[im] - ps.neutral_wall[im] * phi_wall_prime[im];
+                }
             }
         }
     }
@@ -321,12 +498,29 @@ void Init_phase_separation(double *phi, double *psi) {
     std::cout << "# w: " << ps.w << std::endl;
     std::cout << "# alpha: " << ps.alpha << std::endl;
     std::cout << "# kappa: " << ps.kappa << std::endl;
+    std::cout << "# z    : " << ps.z << std::endl;
+    std::cout << "# psi_dry    : " << ps.psi_dry << std::endl;
     std::cout << "#################################" << std::endl;
 
     if (SW_POTENTIAL == Landau) {
-        ps.neutral = 0.;
+        ps.neutral = (gl.a * ps.psi_0_p * ps.psi_0_p * ps.psi_0_p - (gl.b - 2. * ps.d) * ps.psi_0_p) / (2. * ps.d);
+        for (int i = 0; i < NX; i++) {
+            for (int j = 0; j < NY; j++) {
+                for (int k = 0; k < NZ; k++) {
+                    int im              = (i * NY * NZ_) + (j * NZ_) + k;
+                    ps.neutral_wall[im] = (gl.a * ps.psi_0_wall[im] * ps.psi_0_wall[im] * ps.psi_0_wall[im] -
+                                           (gl.b - 2. * ps.d) * ps.psi_0_wall[im]) /
+                                          (2. * ps.d);
+                    neutral_phi_wall_prime[im] = ps.neutral_wall[im] * phi_wall_prime[im];
+                }
+            }
+        }
     } else if (SW_POTENTIAL == Flory_Huggins) {
         ps.neutral = 0.5;
+    }
+
+    if (ps.z != 0) {
+        ps.xi = sqrt(0.5 * ps.alpha / gl.b);
     }
 
     const int seed = 12345;
@@ -510,13 +704,15 @@ void Output_xdmf_particle(std::string filename, std::string hdffilename, CTime &
         if (i % GTS == 0) {
             os_out << R"(<Grid Name="Structured grid" GridType="Uniform">)" << std::endl;
             os_out << R"(<Time Value=")" << i * jikan.dt_fluid << R"(" />)" << std::endl;
-            // os_out << R"(<Information Name="degree_oblique" Value=")" << degree_oblique << R"(" />)" << std::endl;
+            // os_out << R"(<Information Name="degree_oblique" Value=")" << degree_oblique << R"(" />)" <<
+            // std::endl;
             os_out << R"(<Topology Name="tp" TopologyType="Polyvertex" NumberOfElements=")" << Particle_Number
                    << R"("/>)" << std::endl;
             // os_out << R"(<Geometry Name="geo" GeometryType="ORIGIN_DXDYDZ">)" << std::endl;
-            // os_out << R"(<DataItem Name="Origin" Dimensions="3" NumberType="Float" Precision="4" Format="XML">)" <<
-            // std::endl; os_out << "0 0 0" << std::endl; os_out << "</DataItem>" << std::endl; os_out << R"(<DataItem
-            // Name="Spacing" Dimensions="3" NumberType="Float" Precision="4" Format="XML">)" << std::endl; os_out << DX
+            // os_out << R"(<DataItem Name="Origin" Dimensions="3" NumberType="Float" Precision="4" Format="XML">)"
+            // << std::endl; os_out << "0 0 0" << std::endl; os_out << "</DataItem>" << std::endl; os_out <<
+            // R"(<DataItem Name="Spacing" Dimensions="3" NumberType="Float" Precision="4" Format="XML">)" <<
+            // std::endl; os_out << DX
             // << " "
             // << DX << " " << DX << std::endl; os_out << "</DataItem>" << std::endl; os_out << "</Geometry>" <<
             // std::endl;
@@ -600,13 +796,15 @@ void Output_xdmf_particle_single(std::string filename, std::string hdffilename, 
         if (i % GTS == 0) {
             os_out << R"(<Grid Name="Structured grid" GridType="Uniform">)" << std::endl;
             os_out << R"(<Time Value=")" << i * jikan.dt_fluid << R"(" />)" << std::endl;
-            // os_out << R"(<Information Name="degree_oblique" Value=")" << degree_oblique << R"(" />)" << std::endl;
+            // os_out << R"(<Information Name="degree_oblique" Value=")" << degree_oblique << R"(" />)" <<
+            // std::endl;
             os_out << R"(<Topology Name="tp" TopologyType="Polyvertex" NumberOfElements=")" << Particle_Number
                    << R"("/>)" << std::endl;
             // os_out << R"(<Geometry Name="geo" GeometryType="ORIGIN_DXDYDZ">)" << std::endl;
-            // os_out << R"(<DataItem Name="Origin" Dimensions="3" NumberType="Float" Precision="4" Format="XML">)" <<
-            // std::endl; os_out << "0 0 0" << std::endl; os_out << "</DataItem>" << std::endl; os_out << R"(<DataItem
-            // Name="Spacing" Dimensions="3" NumberType="Float" Precision="4" Format="XML">)" << std::endl; os_out << DX
+            // os_out << R"(<DataItem Name="Origin" Dimensions="3" NumberType="Float" Precision="4" Format="XML">)"
+            // << std::endl; os_out << "0 0 0" << std::endl; os_out << "</DataItem>" << std::endl; os_out <<
+            // R"(<DataItem Name="Spacing" Dimensions="3" NumberType="Float" Precision="4" Format="XML">)" <<
+            // std::endl; os_out << DX
             // << " "
             // << DX << " " << DX << std::endl; os_out << "</DataItem>" << std::endl; os_out << "</Geometry>" <<
             // std::endl;
@@ -1162,7 +1360,12 @@ void        Psi2eta(double *psi, double *eta) {
 
 void xdmf_output(CTime jikan) {
     if (PHASE_SEPARATION) {
-        Output_xdmf_sca("fluid_phase", "orderparam", "PSI", jikan);
+        if (SW_EQ == Navier_Stokes_Cahn_Hilliard_FDM) {
+            Output_xdmf_sca("fluid_phase", "orderparam", "PSI_ALL", jikan);
+
+        } else if (SW_EQ == Shear_NS_LE_CH_FDM) {
+            Output_xdmf_sca("fluid_phase", "orderparam", "PSI", jikan);
+        }
     }
     if (Particle_Number > 0) {
         Output_xdmf_sca("particle_phase", "particle", "PHI", jikan);
@@ -1178,4 +1381,5 @@ void xdmf_output(CTime jikan) {
     }
 
     Output_xdmf_vec("velocity_field", "velocity", "UX", "UY", "UZ", jikan);
+    Output_xdmf_vec("flux_field", "flux", "FLUX_X", "FLUX_Y", "FLUX_Z", jikan);
 }

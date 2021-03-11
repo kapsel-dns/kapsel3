@@ -31,6 +31,7 @@ PO          SW_POTENTIAL;
 const char *NS_SOLVERTYPE_name[] = {"explicit_scheme", "implicit_scheme"};
 const char *CH_SOLVERTYPE_name[] = {"explicit_scheme", "implicit_scheme"};
 const char *POTENTIAL_name[]     = {"Landau", "Flory_Huggins"};
+const char *PSI_0_WALL_name[]    = {"uniform", "user_specify"};
 int         PHASE_SEPARATION;
 int         VISCOSITY_CHANGE;
 double      eps_ns;
@@ -127,6 +128,7 @@ int         N_PIN;
 int *       Pinning_Numbers;
 int         N_PIN_ROT;
 int *       Pinning_ROT_Numbers;
+int         System_Size;
 //////
 double EPSILON;
 double T_LJ;
@@ -737,6 +739,21 @@ void Gourmet_file_io(const char *infile,
         // ufres->put("resume.CONTINUE.Saved_Data.jikan.ts",last_ts);
     }
 
+    /////// 計算条件の設定
+    {
+        Location target("mesh");
+        int      x_dmy, y_dmy, z_dmy;
+        io_parser(target.sub("NPX"), x_dmy);
+        io_parser(target.sub("NPY"), y_dmy);
+        io_parser(target.sub("NPZ"), z_dmy);
+        NX = 1 << x_dmy;
+        NY = 1 << y_dmy;
+        NZ = 1 << z_dmy;
+
+        ps.psi_0_wall   = alloc_1d_double(NX * NY * (NZ + 2));
+        ps.neutral_wall = alloc_1d_double(NX * NY * (NZ + 2));
+    }
+
     /////// select constitutive eq
     {
         Location target("constitutive_eq");
@@ -1028,8 +1045,51 @@ void Gourmet_file_io(const char *infile,
                         io_parser(target.sub("b"), gl.b);
                         io_parser(target.sub("d"), ps.d);
                         io_parser(target.sub("w"), ps.w);
+                        io_parser(target.sub("w_wall"), ps.w_wall);
+                        io_parser(target.sub("z"), ps.z);
                         io_parser(target.sub("alpha"), ps.alpha);
                         io_parser(target.sub("kappa"), ps.kappa);
+                        io_parser(target.sub("psi_0_p"), ps.psi_0_p);
+                        io_parser(target.sub("psi_dry"), ps.psi_dry);
+                        io_parser(target.sub("psi_0_wall.type"), str);
+                        if (str == "uniform") {
+                            int im = 0;
+                            for (int i = 0; i < NX; i++) {
+                                for (int j = 0; j < NY; j++) {
+                                    for (int k = 0; k < NZ; k++) {
+                                        im = (i * NY * (NZ + 2)) + (j * (NZ + 2)) + k;
+                                        io_parser(target.sub("psi_0_wall.uniform.psi_0_wall"), ps.psi_0_wall[im]);
+                                    }
+                                }
+                            }
+                        } else if (str == "user_specify") {
+                            int  im = 0;
+                            char str2[256];
+                            for (int i = 0; i < NX; i++) {
+                                for (int j = 0; j < NY; j++) {
+                                    for (int k = 0; k < NZ; k++) {
+                                        im = (i * NY * (NZ + 2)) + (j * (NZ + 2)) + k;
+                                        sprintf(str2,
+                                                "constitutive_eq.Navier_Stokes_Cahn_Hilliard_FDM.Potential.Landau.psi_"
+                                                "0_wall.user_specify.psi_0_wall[%d][%d]",
+                                                i,
+                                                j);
+                                        Location target(str2);
+                                        ufin->get(target.sub("psi_0_wall"), ps.psi_0_wall[im]);
+                                    }
+                                }
+                            }
+                        } else {
+                            for (int i = 0; i < NX; i++) {
+                                for (int j = 0; j < NY; j++) {
+                                    for (int k = 0; k < NZ; k++) {
+                                        int im            = (i * NY * (NZ + 2)) + (j * (NZ + 2)) + k;
+                                        ps.psi_0_wall[im] = 0.;
+                                    }
+                                }
+                            }
+                            fprintf(stderr, "psi_0_wall = 0\n");
+                        }
                     } else if (str == "Flory_Huggins") {
                         SW_POTENTIAL = Flory_Huggins;
                         target.down("Flory_Huggins");
@@ -1040,6 +1100,8 @@ void Gourmet_file_io(const char *infile,
                         io_parser(target.sub("chi"), fh.chi);
                         io_parser(target.sub("d"), ps.d);
                         io_parser(target.sub("w"), ps.w);
+                        io_parser(target.sub("w_wall"), ps.w_wall);
+                        io_parser(target.sub("z"), ps.z);
                         io_parser(target.sub("alpha"), ps.alpha);
                         io_parser(target.sub("kappa"), ps.kappa);
                     } else {
@@ -1177,6 +1239,7 @@ void Gourmet_file_io(const char *infile,
                         io_parser(target.sub("b"), gl.b);
                         io_parser(target.sub("d"), ps.d);
                         io_parser(target.sub("w"), ps.w);
+                        io_parser(target.sub("z"), ps.z);
                         io_parser(target.sub("alpha"), ps.alpha);
                         io_parser(target.sub("kappa"), ps.kappa);
                     } else if (str == "Flory_Huggins") {
@@ -1189,6 +1252,7 @@ void Gourmet_file_io(const char *infile,
                         io_parser(target.sub("chi"), fh.chi);
                         io_parser(target.sub("d"), ps.d);
                         io_parser(target.sub("w"), ps.w);
+                        io_parser(target.sub("z"), ps.z);
                         io_parser(target.sub("alpha"), ps.alpha);
                         io_parser(target.sub("kappa"), ps.kappa);
                     } else {
@@ -2131,8 +2195,9 @@ void Gourmet_file_io(const char *infile,
                 exit_job(EXIT_FAILURE);
             }
         }
-        if (SW_WALL != NO_WALL && SW_EQ != Navier_Stokes) {
-            fprintf(stderr, "# Error: walls only enabled for Navier_Stokes simulations so far\n");
+        if (SW_WALL != NO_WALL &&
+            !(SW_EQ == Navier_Stokes || SW_EQ == Navier_Stokes_FDM || SW_EQ == Navier_Stokes_Cahn_Hilliard_FDM)) {
+            fprintf(stderr, "# Error: walls only enabled for Navier_Stokes [PS,FDM] simulations so far\n");
             exit(-1);
         }
     }

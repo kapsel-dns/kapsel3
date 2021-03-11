@@ -58,7 +58,10 @@ struct ooura_plan {
 extern ooura_plan ooura_p;
 
 extern double **ucp;
-extern double * phi, *phi_p, *phi_sum, **up, **u, *rhop, *phi_wall;
+extern double * phi, *phi_p, *phi_sum, *phi_s, **up, **u, *rhop, *phi_wall, *phi_wall_prime, *phi_wall_double_prime,
+    **flux;
+extern double *psi_all, *psi_all_o, *f_prime, *f_prime_o, *grad_phi_wall, *grad_phi_wall_prime, *neutral_phi_wall_prime;
+extern double **I, **ns, ***coef;
 extern double **work_v3, **work_v2, *work_v1;
 
 extern int *   KX_int, *KY_int, *KZ_int;

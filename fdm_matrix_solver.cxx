@@ -152,7 +152,7 @@ void NS_MAC_solver_implicit(double **u, double *pressure, double **u_s, const CT
 #ifdef _LIS_SOLVER
         u[d][im] = x_ns->value[ijkd2idx(i, j, k, d)];
 #else
-        u[d][im] = wm_ns.x[ijkd2idx(i, j, k, d)];
+        u[d][im]  = wm_ns.x[ijkd2idx(i, j, k, d)];
 #endif
     }
 }
@@ -262,7 +262,7 @@ void CHNS_MAC_solver_implicit(double **    u,
 #ifdef _LIS_SOLVER
         u[d][im] = x_ns->value[ijkd2idx(i, j, k, d)];
 #else
-        u[d][im] = wm_ns.x[ijkd2idx(i, j, k, d)];
+        u[d][im]  = wm_ns.x[ijkd2idx(i, j, k, d)];
 #endif
     }
 }
@@ -469,7 +469,7 @@ void CHNS_MAC_solver_implicit_viscosity(double **    u,
 #ifdef _LIS_SOLVER
         u[d][im] = x_ns->value[ijkd2idx(i, j, k, d)];
 #else
-        u[d][im] = wm_ns.x[ijkd2idx(i, j, k, d)];
+        u[d][im]  = wm_ns.x[ijkd2idx(i, j, k, d)];
 #endif
     }
 }
@@ -617,7 +617,7 @@ void NS_MAC_solver_implicit_OBL(double **    u,
 #ifdef _LIS_SOLVER
         u[d][im] = x_ns->value[ijkd2idx(i, j, k, d)];
 #else
-        u[d][im] = wm_ns.x[ijkd2idx(i, j, k, d)];
+        u[d][im]  = wm_ns.x[ijkd2idx(i, j, k, d)];
 #endif
     }
 }
@@ -767,7 +767,7 @@ void CHNS_MAC_solver_implicit_OBL(double **    u,
 #ifdef _LIS_SOLVER
         u[d][im] = x_ns->value[ijkd2idx(i, j, k, d)];
 #else
-        u[d][im] = wm_ns.x[ijkd2idx(i, j, k, d)];
+        u[d][im]  = wm_ns.x[ijkd2idx(i, j, k, d)];
 #endif
     }
 }
@@ -1078,7 +1078,7 @@ void CHNS_MAC_solver_implicit_viscosity_OBL(double **    u,
 #ifdef _LIS_SOLVER
         u[d][im] = x_ns->value[ijkd2idx(i, j, k, d)];
 #else
-        u[d][im] = wm_ns.x[ijkd2idx(i, j, k, d)];
+        u[d][im]  = wm_ns.x[ijkd2idx(i, j, k, d)];
 #endif
     }
 }
@@ -2639,7 +2639,7 @@ void CH_solver_implicit_bdfab(double *     psi,
 #ifdef _LIS_SOLVER
         lis_vector_set_value(LIS_INS_VALUE, idx, bs, b_ch);
 #else
-        b_ch[idx] = bs;
+        b_ch[idx]   = bs;
 #endif
     }
 
@@ -3064,7 +3064,7 @@ void CH_solver_implicit_euler_OBL(double *     psi,
 #ifdef _LIS_SOLVER
         lis_vector_set_value(LIS_INS_VALUE, idx, bs, b_ch);
 #else
-        b_ch[idx] = bs;
+        b_ch[idx]   = bs;
 #endif
     }
     // solver
@@ -3091,7 +3091,7 @@ void CH_solver_implicit_euler_OBL(double *     psi,
 #ifdef _LIS_SOLVER
         psi[im] = x_ch->value[idx];
 #else
-        psi[im] = wm_ch.x[ijk2idx(i, j, k)];
+        psi[im]   = wm_ch.x[ijk2idx(i, j, k)];
 #endif
     }
 }

@@ -197,8 +197,8 @@ inline double Lennard_Jones_f(const double &x,
         if (lj_powers == 4) {                            // electro-osmotic flow potential
             static const double LJ_coeff_N      = 1.01;  // koko wo user ga shitei
             static const double LJ_coeff_Nsigma = LJ_coeff_N * sigma;
-            if (x >= LJ_coeff_Nsigma) {  
-                answer = -1.0 * epsilon * exp(-x /sigma /3.) /x/x/x * (x/3./sigma +2);
+            if (x >= LJ_coeff_Nsigma) {
+                answer = -1.0 * epsilon * exp(-x / sigma / 3.) / x / x / x * (x / 3. / sigma + 2);
             } else {
                 static const double LJ_coeff1 = 72. * epsilon;
                 double              dmy       = sigma / x;

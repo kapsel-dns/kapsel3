@@ -2330,7 +2330,7 @@ void Gourmet_file_io(const char *infile,
                                         ewald_param.m_image = true;
                                     }
                                     io_parser(target.sub("Pz_factor"), ewald_param.Pz_factor);
-                                    target.up(); //QUINCKE
+                                    target.up();  // QUINCKE
                                     if (SW_QUINCKE == QUINCKE_OFF) {
                                         fprintf(stderr,
                                                 "# Error : Quincke dipole specified but Quincke particles not "

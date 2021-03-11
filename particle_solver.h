@@ -111,7 +111,6 @@ inline void Force(Particle *p) {
         } else {
             Calc_multipole_interaction_force_torque(p);
         }
-        
     }
 }
 

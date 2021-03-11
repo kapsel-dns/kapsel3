@@ -42,8 +42,7 @@ void        Calc_cp_wall(double *phi, double *phi_p, double *phi_wall_prime, dou
             for (int k = 0; k < NZ; k++) {
                 int im = (i * NY * NZ_) + (j * NZ_) + k;
 
-
-                double lap_psi      = calc_laplacian(psi_all, im);
+                double lap_psi = calc_laplacian(psi_all, im);
 
                 double dphi_dx      = calc_gradient_o1_to_o1(phi_p, im, 0);
                 double dphi_dy      = calc_gradient_o1_to_o1(phi_p, im, 1);
@@ -52,9 +51,9 @@ void        Calc_cp_wall(double *phi, double *phi_p, double *phi_wall_prime, dou
                 double dphi_wall_dy = calc_gradient_o1_to_o1(phi_wall, im, 1);
                 double dphi_wall_dz = calc_gradient_o1_to_o1(phi_wall, im, 2);
 
-                double dpsi_dx      = calc_gradient_o1_to_o1(psi_all, im, 0);
-                double dpsi_dy      = calc_gradient_o1_to_o1(psi_all, im, 1);
-                double dpsi_dz      = calc_gradient_o1_to_o1(psi_all, im, 2);
+                double dpsi_dx = calc_gradient_o1_to_o1(psi_all, im, 0);
+                double dpsi_dy = calc_gradient_o1_to_o1(psi_all, im, 1);
+                double dpsi_dz = calc_gradient_o1_to_o1(psi_all, im, 2);
 
                 double grad_phi_norm = dphi_dx * dphi_dx + dphi_dy * dphi_dy + dphi_dz * dphi_dz;
                 double grad_phi_wall_norm =

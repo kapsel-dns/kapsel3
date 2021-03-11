@@ -849,7 +849,7 @@ void Calc_multipole_interaction_force_torque_with_image(Particle *p) {
                     } else {
                         ri[d] = xi[d];
                     }
-                }   
+                }
             }
         }
         if (ewald_param.dipole) {
@@ -898,7 +898,7 @@ void Calc_multipole_interaction_force_torque_with_image(Particle *p) {
                     torqueGrs[rigidID][0] += (GRvecs[n][1] * frc[2] - GRvecs[n][2] * frc[1]);
                     torqueGrs[rigidID][1] += (GRvecs[n][2] * frc[0] - GRvecs[n][0] * frc[2]);
                     torqueGrs[rigidID][2] += (GRvecs[n][0] * frc[1] - GRvecs[n][1] * frc[0]);
-                } 
+                }
             }
         }
     }

@@ -46,9 +46,9 @@ void Init_lis(int argc, char *argv[]);
 void Mem_alloc_lis(void);
 void Free_lis(void);
 #else
-void        Init_ns(void);
-void        Init_ch(void);
-inline void Calc_Ax(double *x, int *idx, double *val, int *row_ptr, double *ans, int iend) {
+void                 Init_ns(void);
+void                 Init_ch(void);
+inline void          Calc_Ax(double *x, int *idx, double *val, int *row_ptr, double *ans, int iend) {
 #pragma omp parallel for
     for (int i = 0; i < iend; i++) {
         double sum = 0.;

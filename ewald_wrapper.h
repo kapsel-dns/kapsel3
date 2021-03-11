@@ -59,13 +59,13 @@ typedef struct EwaldMem {
         num      = _num;
         group_id = (int *)alloc_1d_int(num);
         if (ewald_param.m_image == true) {
-            r        = (double **)alloc_2d_double(num*2, DIM);
-            mu       = (ewald_param.dipole ? (double **)alloc_2d_double(num*2, DIM) : nullptr);
+            r  = (double **)alloc_2d_double(num * 2, DIM);
+            mu = (ewald_param.dipole ? (double **)alloc_2d_double(num * 2, DIM) : nullptr);
         } else {
-            r        = (double **)alloc_2d_double(num, DIM);
-            mu       = (ewald_param.dipole ? (double **)alloc_2d_double(num, DIM) : nullptr);
+            r  = (double **)alloc_2d_double(num, DIM);
+            mu = (ewald_param.dipole ? (double **)alloc_2d_double(num, DIM) : nullptr);
         }
-        q        = (ewald_param.charge ? (double *)alloc_1d_double(num) : nullptr);
+        q = (ewald_param.charge ? (double *)alloc_1d_double(num) : nullptr);
 
         if (ewald_param.m_image == true) {
             {
@@ -87,9 +87,9 @@ typedef struct EwaldMem {
             }
         }
         for (int i = 0; i < num; i++) group_id[i] = -(i + 1);
-                if (ewald_param.charge) {
-                    for (int i = 0; i < num; i++) q[i] = 0.0;
-                }
+        if (ewald_param.charge) {
+            for (int i = 0; i < num; i++) q[i] = 0.0;
+        }
 
         force       = (double **)alloc_2d_double(num, DIM);
         torque      = (double **)alloc_2d_double(num, DIM);

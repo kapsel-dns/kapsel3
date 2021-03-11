@@ -799,3 +799,15 @@ void Make_phi_rigid_inertia_OBL(const double *phi_sum, Particle *p) {
         check_Inverse(Rigid_Moments[rigidID], Rigid_IMoments[rigidID], DIM);
     }
 }
+void Make_phi_p(double *phi_p, double const *phi, double const *phi_wall){
+    #pragma omp parallel for
+    for (int i = 0; i < NX; i++) {
+        for (int j = 0; j < NY; j++) {
+            for (int k = 0; k < NZ; k++) {
+                int im = (i * NY * NZ_) + (j * NZ_) + k;
+
+                phi_p[im] = phi[im] - phi_wall[im];
+            }
+        }
+    }
+}

@@ -35,6 +35,7 @@ inline double potential_deriv(double x) {
 }
 
 void Calc_cp(double *phi, double *psi, double *cp);
+void Calc_cp_wall(double *phi, double *phi_p, double *phi_wall, double *psi, double *cp);
 void Calc_cp_OBL(double *phi, double *psi, double *cp, const double degree_oblique);
 
 void Cp2stress(double *cp, double *psi, double **stress);

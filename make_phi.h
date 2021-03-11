@@ -557,4 +557,8 @@ void Make_phi_rigid_inertia(const double *phi_sum, Particle *p);
  */
 void Make_phi_rigid_inertia_OBL(const double *phi_sum, Particle *p);
 
+/*!
+  \brief calculation of phi_p for the case of Wall
+*/
+void Make_phi_p(double *phi_p, double const *phi, double const *phi_wall);
 #endif

@@ -18,7 +18,7 @@ ooura_plan ooura_p;
 #endif
 
 double **ucp;
-double * phi, *phi_sum, **up, **u, *rhop, *phi_wall;
+double * phi, *phi_p, *phi_sum, **up, **u, *rhop, *phi_wall;
 double **work_v3, **work_v2, *work_v1;
 
 int *   KX_int, *KY_int, *KZ_int;

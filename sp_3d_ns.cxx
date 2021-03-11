@@ -214,9 +214,13 @@ void Time_evolution_hydro_fdm(double **&u, double *Pressure, double **f, Particl
             }
         }
         Reset_phi(phi);
-        Reset_phi(phi_sum);
+        if (SW_WALL != NO_WALL) {
+            Copy_v1(phi_sum, phi_wall);
+        } else {
+            Reset_phi(phi_sum);
+        }
         Make_phi_particle_sum(phi, phi_sum, p);
-
+        Make_phi_p(phi_p,phi,phi_wall);
         // Calculation of hydrodynamic force
 
         Reset_u(up);
@@ -305,7 +309,11 @@ void Time_evolution_hydro_fdm(double **&u, double *Pressure, double **f, Particl
     if (PHASE_SEPARATION) {
         if (SW_CHST == explicit_scheme) {
             Cpy_v1(psi_o, psi);
-            Calc_cp(phi, psi, cp);
+            if (SW_WALL != NO_WALL) {
+                Calc_cp_wall(phi, phi_p, phi_wall, psi, cp);
+            } else {
+                Calc_cp(phi, psi, cp);
+            }
             Update_psi_euler(psi, u, phi, cp, jikan);
         } else if (SW_CHST == implicit_scheme) {
             if (jikan.ts < 2) {
@@ -618,6 +626,7 @@ inline void Mem_alloc_var(double **zeta) {
     }
 
     phi             = alloc_1d_double(NX * NY * NZ_);
+    phi_p           = alloc_1d_double(NX * NY * NZ_);
     phi_sum         = alloc_1d_double(NX * NY * NZ_);
     phi_wall        = alloc_1d_double(NX * NY * NZ_);
     rhop            = alloc_1d_double(NX * NY * NZ_);
@@ -809,8 +818,13 @@ int main(int argc, char *argv[]) {
     Init_zeta_k(zeta, uk_dc);
     {
         Reset_phi_u(phi, up);
-        Reset_phi(phi_sum);
+        if (SW_WALL != NO_WALL) {
+            Copy_v1(phi_sum, phi_wall);
+        } else {
+            Reset_phi(phi_sum);
+        }
         Make_phi_particle_sum(phi, phi_sum, particles);
+        Make_phi_p(phi_p, phi, phi_wall);
         Make_u_particle_sum(up, phi_sum, particles);
         Zeta_k2u(zeta, uk_dc, u);
 
@@ -888,7 +902,7 @@ int main(int argc, char *argv[]) {
 
                 if (PHASE_SEPARATION) {
                     if (SW_EQ == Navier_Stokes_Cahn_Hilliard_FDM) {
-                        Output_hdf5_sca("orderparam", "PSI", psi, jikan.ts / GTS);
+                       Output_hdf5_sca("orderparam", "PSI", psi, jikan.ts / GTS);
                     } else if (SW_EQ == Shear_NS_LE_CH_FDM) {
                         A_oblique2a_out(psi, work_v1);
                         Output_hdf5_sca("orderparam", "PSI", work_v1, jikan.ts / GTS);
@@ -984,7 +998,12 @@ Shear_NS_LE_CH_FDM) { calc_shear_rate_field(u, shear_rate_field);
                 Reset_phi(phi_sum);
                 Make_phi_particle_sum(phi, phi_sum, particles);
                 if (PHASE_SEPARATION) {
-                    Calc_cp(phi, psi, cp);
+                    if (SW_WALL != NO_WALL){
+                        Calc_cp_wall(phi, phi_p, phi_wall, psi, cp);
+                    }
+                    else{
+                        Calc_cp(phi,psi,cp);
+                    }
                     Cp2stress(cp, psi, stress);
                 }
             } else if (SW_EQ == Navier_Stokes_FDM || SW_EQ == Shear_Navier_Stokes_Lees_Edwards_FDM) {

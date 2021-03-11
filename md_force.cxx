@@ -16,20 +16,32 @@ double *Hydro_force_new;
 void compute_particle_dipole_quincke(double *mu_space, const double *mu_body, quaternion &q) {
     double e_omega_space[DIM] = {0.0, 0.0, 0.0};
     rigid_body_rotation(e_omega_space, quincke.e_omega, q, BODY2SPACE);
-
-    mu_space[0] = quincke.n[1] * e_omega_space[2] - quincke.n[2] * e_omega_space[1];
-    mu_space[1] = quincke.n[2] * e_omega_space[0] - quincke.n[0] * e_omega_space[2];
-    mu_space[2] = quincke.n[0] * e_omega_space[1] - quincke.n[1] * e_omega_space[0];
-
+    mu_space[0]            = quincke.n[1] * e_omega_space[2] - quincke.n[2] * e_omega_space[1];
+    mu_space[1]            = quincke.n[2] * e_omega_space[0] - quincke.n[0] * e_omega_space[2];
+    mu_space[2]            = quincke.n[0] * e_omega_space[1] - quincke.n[1] * e_omega_space[0];
     const double magnitude = mu_body[0] / sqrt(SQ(mu_space[0]) + SQ(mu_space[1]) + SQ(mu_space[2]));
     mu_space[0] *= magnitude;
     mu_space[1] *= magnitude;
     mu_space[2] *= magnitude;
+    mu_space[2] -= magnitude * ewald_param.Pz_factor;
+}
+void compute_particle_dipole_quincke_image(double *mu_space, const double *mu_body, quaternion &q) {
+    double e_omega_space[DIM] = {0.0, 0.0, 0.0};
+    rigid_body_rotation(e_omega_space, quincke.e_omega, q, BODY2SPACE);
+    mu_space[0]            = quincke.n[1] * e_omega_space[2] - quincke.n[2] * e_omega_space[1];
+    mu_space[1]            = quincke.n[2] * e_omega_space[0] - quincke.n[0] * e_omega_space[2];
+    mu_space[2]            = quincke.n[0] * e_omega_space[1] - quincke.n[1] * e_omega_space[0];
+    const double magnitude = mu_body[0] / sqrt(SQ(mu_space[0]) + SQ(mu_space[1]) + SQ(mu_space[2]));
+    mu_space[0] *= -magnitude;
+    mu_space[1] *= -magnitude;
+    mu_space[2] *= magnitude;
+    mu_space[2] -= magnitude * ewald_param.Pz_factor;
 }
 void compute_particle_dipole_standard(double *mu_space, const double *mu_body, quaternion &q) {
     rigid_body_rotation(mu_space, mu_body, q, BODY2SPACE);
 }
 void (*compute_particle_dipole)(double *mu_space, const double *mu_body, quaternion &q);
+void (*compute_particle_dipole_image)(double *mu_space, const double *mu_body, quaternion &q);
 
 void Calc_f_Lennard_Jones_shear_cap_primitive_lnk(
     Particle *p,
@@ -813,6 +825,80 @@ void Calc_multipole_interaction_force_torque(Particle *p) {
                     torqueGrs[rigidID][1] += (GRvecs[n][2] * frc[0] - GRvecs[n][0] * frc[2]);
                     torqueGrs[rigidID][2] += (GRvecs[n][0] * frc[1] - GRvecs[n][1] * frc[0]);
                 }
+            }
+        }
+    }
+}
+
+void Calc_multipole_interaction_force_torque_with_image(Particle *p) {
+    {  // Mem copy
+#pragma omp parallel for
+        for (int i = 0; i < Particle_Number * 2; i++) {
+            double *ri = ewald_mem.r[i];
+            double *xi;
+            if (i < Particle_Number) {
+                xi = p[i].x;
+                for (int d = 0; d < DIM; d++) {
+                    ri[d] = xi[d];
+                }
+            } else {
+                xi = p[i - Particle_Number].x;
+                for (int d = 0; d < DIM; d++) {
+                    if (d == 2) {
+                        ri[d] = xi[d] - 4.1;
+                    } else {
+                        ri[d] = xi[d];
+                    }
+                }   
+            }
+        }
+        if (ewald_param.dipole) {
+            for (int specID = 0; specID < Component_Number; specID++) {
+                const int nump        = Particle_Numbers[specID];
+                const int nump_double = nump * 2;
+                double *  mu_body     = multipole_mu[specID];
+                int       offset      = 0;
+#pragma omp parallel for
+                for (int i0 = 0; i0 < nump_double; i0++) {
+                    int i = offset + i0;
+                    if (i0 < nump) {
+                        compute_particle_dipole(ewald_mem.mu[i], mu_body, p[i].q);
+                    } else {
+                        compute_particle_dipole_image(ewald_mem.mu[i], mu_body, p[i - nump].q);
+                    }
+                }
+                offset += Particle_Numbers[specID] * 2;
+            }
+        }
+        compute_ewald_sum();
+    }
+
+    {  // Update particle forces & torques
+#pragma omp parallel for
+        for (int i = 0; i < Particle_Number; i++) {
+            Particle &pi = p[i];
+            for (int d = 0; d < DIM; d++) {
+                pi.fr[d] += ewald_mem.force[i][d];
+                pi.torque_r[d] += ewald_mem.torque[i][d];
+            }
+        }
+    }
+
+    if (SW_PT == rigid) {  // Update rigid forces & torques
+#pragma omp parallel for
+        for (int rigidID = 0; rigidID < Rigid_Number; rigidID++) {
+            for (int n = Rigid_Particle_Cumul[rigidID]; n < Rigid_Particle_Cumul[rigidID + 1]; n++) {
+                const double *frc = ewald_mem.force[n];
+                const double *tau = ewald_mem.torque[n];
+                for (int d = 0; d < DIM; d++) {
+                    forceGrs[rigidID][d] += frc[d];
+                    torqueGrs[rigidID][d] += tau[d];
+                }
+                {
+                    torqueGrs[rigidID][0] += (GRvecs[n][1] * frc[2] - GRvecs[n][2] * frc[1]);
+                    torqueGrs[rigidID][1] += (GRvecs[n][2] * frc[0] - GRvecs[n][0] * frc[2]);
+                    torqueGrs[rigidID][2] += (GRvecs[n][0] * frc[1] - GRvecs[n][1] * frc[0]);
+                } 
             }
         }
     }

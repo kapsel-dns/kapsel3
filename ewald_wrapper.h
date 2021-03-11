@@ -20,9 +20,11 @@ typedef struct EwaldParams {
     double delta   = EPSILON_MP;
     double conv    = 0.51;
     double epsilon = -1.0;  // tinfoil if < 0
+    double Pz_factor;
     bool   charge  = false;
     bool   dipole  = false;
     bool   enabled = false;
+    bool   m_image = false;
     void   init(double _alpha, double _delta, double _conv, double _eps, bool _charge, bool _dipole) {
         alpha   = _alpha;
         delta   = _delta;
@@ -56,21 +58,38 @@ typedef struct EwaldMem {
     void init(const int &_num) {
         num      = _num;
         group_id = (int *)alloc_1d_int(num);
-        r        = (double **)alloc_2d_double(num, DIM);
+        if (ewald_param.m_image == true) {
+            r        = (double **)alloc_2d_double(num*2, DIM);
+            mu       = (ewald_param.dipole ? (double **)alloc_2d_double(num*2, DIM) : nullptr);
+        } else {
+            r        = (double **)alloc_2d_double(num, DIM);
+            mu       = (ewald_param.dipole ? (double **)alloc_2d_double(num, DIM) : nullptr);
+        }
         q        = (ewald_param.charge ? (double *)alloc_1d_double(num) : nullptr);
-        mu       = (ewald_param.dipole ? (double **)alloc_2d_double(num, DIM) : nullptr);
-        {
-            for (int i = 0; i < num; i++) group_id[i] = -(i + 1);
-            if (ewald_param.charge) {
-                for (int i = 0; i < num; i++) q[i] = 0.0;
+
+        if (ewald_param.m_image == true) {
+            {
+                double *rr = r[0];
+                for (int i = 0; i < num * 2 * DIM; i++) rr[i] = 0.0;
+                if (ewald_param.dipole) {
+                    double *pp = mu[0];
+                    for (int i = 0; i < num * 2 * DIM; i++) pp[i] = 0.0;
+                }
             }
-            double *rr = r[0];
-            for (int i = 0; i < num * DIM; i++) rr[i] = 0.0;
-            if (ewald_param.dipole) {
-                double *pp = mu[0];
-                for (int i = 0; i < num * DIM; i++) pp[i] = 0.0;
+        } else {
+            {
+                double *rr = r[0];
+                for (int i = 0; i < num * DIM; i++) rr[i] = 0.0;
+                if (ewald_param.dipole) {
+                    double *pp = mu[0];
+                    for (int i = 0; i < num * DIM; i++) pp[i] = 0.0;
+                }
             }
         }
+        for (int i = 0; i < num; i++) group_id[i] = -(i + 1);
+                if (ewald_param.charge) {
+                    for (int i = 0; i < num; i++) q[i] = 0.0;
+                }
 
         force       = (double **)alloc_2d_double(num, DIM);
         torque      = (double **)alloc_2d_double(num, DIM);

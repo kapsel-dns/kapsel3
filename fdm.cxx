@@ -78,8 +78,12 @@ void NS_solver_slavedEuler_implicit(double **u, double *Pressure, Particle *p, C
         Reset_phi(w_v3[1]);
         Reset_phi(w_v3[2]);
         Make_phi_s(w_v3[1], w_v3[2], p, DX, NP_domain, Sekibun_cell, Ns, jikan);
-
-        Calc_cp(w_v3[1], w_v3[0], cp);
+        if(SW_WALL!=NO_WALL){
+            Calc_cp_wall(w_v3[1], phi_p, phi_wall, w_v3[0], cp);
+        }
+        else{
+            Calc_cp(w_v3[1], w_v3[0], cp);
+        }
         Cp2stress(cp, w_v3[0], stress);
 
         if (VISCOSITY_CHANGE) {

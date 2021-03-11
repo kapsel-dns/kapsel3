@@ -217,11 +217,13 @@ extern void compute_particle_dipole_standard(double *mu_space, const double *mu_
     \param[in]  q orientation quaternion
 */
 extern void compute_particle_dipole_quincke(double *mu_space, const double *mu_body, quaternion &q);
+extern void compute_particle_dipole_quincke_image(double *mu_space, const double *mu_body, quaternion &q);
 
 /*!
     \brief Generic funtion pointer used to compute particle dipole
 */
 extern void (*compute_particle_dipole)(double *mu_space, const double *mu_body, quaternion &q);
+extern void (*compute_particle_dipole_image)(double *mu_space, const double *mu_body, quaternion &q);
 
 //////
 extern char Out_dir[];

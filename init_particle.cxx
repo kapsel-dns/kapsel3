@@ -697,6 +697,8 @@ void Show_parameter(Particle *p) {
                 sprintf(line, "%s %s", line, "LJ(36:18)");
             } else if (LJ_powers == 3) {
                 sprintf(line, "%s %s", line, "macro_vdw");
+            } else if (LJ_powers == 4) {
+                sprintf(line, "%s %s", line, "electro_osmotic_flow");
             } else {
                 fprintf(fp, "invalid LJ_powers\n");
                 exit_job(EXIT_FAILURE);

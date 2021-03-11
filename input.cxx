@@ -1799,6 +1799,8 @@ void Gourmet_file_io(const char *infile,
             LJ_powers = 2;
         } else if (str == "macro_vdw") {
             LJ_powers = 3;
+        } else if (str == "electro_osmotic_flow") {
+            LJ_powers = 4;
         } else {
             fprintf(stderr, "invalid LJ_powers\n");
             exit_job(EXIT_FAILURE);
@@ -1880,6 +1882,9 @@ void Gourmet_file_io(const char *infile,
                 A_R_cutoff = pow(2., 1. / 18.);
             }
             if (LJ_powers == 3) {
+                A_R_cutoff = 1.0;
+            }
+            if (LJ_powers == 4) {
                 A_R_cutoff = 1.0;
             }
         } else if (LJ_truncate == 0) {
@@ -2262,7 +2267,7 @@ void Gourmet_file_io(const char *infile,
         }
         if (SW_QUINCKE != QUINCKE_OFF && (SW_EQ != Navier_Stokes)) {
             fprintf(stderr, "# Error: quincke effect only enabled for Navier_Stokes simulations so far\n");
-            exit(-1);
+            // exit(-1);
         }
     }
     {
@@ -2290,7 +2295,6 @@ void Gourmet_file_io(const char *infile,
 
                                 // dipole magnitude
                                 io_parser(target.sub("magnitude"), magnitude);
-
                                 // dipole type
                                 string dipole_type;
                                 io_parser(target.sub("type"), dipole_type);
@@ -2318,6 +2322,15 @@ void Gourmet_file_io(const char *infile,
                                     mu_vec[0] = magnitude;  // hack the dipole array to store the magnitude
                                     compute_particle_dipole =
                                         compute_particle_dipole_quincke;  // use quincke dipole definition
+                                    compute_particle_dipole_image =
+                                        compute_particle_dipole_quincke_image;  // use quincke dipole definition image
+                                    target.down("QUINCKE");
+                                    io_parser(target.sub("type"), str);
+                                    if (str == "with_mirror_image") {
+                                        ewald_param.m_image = true;
+                                    }
+                                    io_parser(target.sub("Pz_factor"), ewald_param.Pz_factor);
+                                    target.up(); //QUINCKE
                                     if (SW_QUINCKE == QUINCKE_OFF) {
                                         fprintf(stderr,
                                                 "# Error : Quincke dipole specified but Quincke particles not "

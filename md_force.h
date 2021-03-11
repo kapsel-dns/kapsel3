@@ -180,4 +180,6 @@ void Calc_harmonic_torque_quincke(Particle *p);
 
 void Calc_multipole_interaction_force_torque(Particle *p);
 
+void Calc_multipole_interaction_force_torque_with_image(Particle *p);
+
 #endif

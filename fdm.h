@@ -725,7 +725,7 @@ inline double calc_gamma(double **u, int im) {
     return sqrt(invariant_half);
 }
 
-inline double calc_div_tensor_gradient_inner(const double ***tensor, const double *field, int im) {
+inline double calc_div_tensor_gradient_inner(const double *const *const *tensor, const double *field, int im) {
     const double INV_DX  = 1. / DX;
     const double INV_DX2 = 1. / (DX * DX);
     int          i, j, k;
